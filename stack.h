@@ -1,7 +1,7 @@
 #ifndef STACK_H
 #define STACK_H
-
-typedef char stackElementT;
+#include "tag.h"
+typedef void* stackElementT;
 
 typedef struct{
 	stackElementT *contents;
@@ -15,5 +15,6 @@ int StackIsEmpty(stackT *stackP);
 int StackIsFull(stackT *stackP);
 void StackPush(stackT *stackP, stackElementT element);
 stackElementT StackPop(stackT *stackP);
-
+stackElementT StackGetTop(stackT *stackP);
+stackElementT stackGep(int index);
 #endif
