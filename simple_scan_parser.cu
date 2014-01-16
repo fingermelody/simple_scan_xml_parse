@@ -8,6 +8,7 @@
 #include "device_launch_parameters.h"
 #include <string.h>
 #include "simple_scan_parser.h"
+#include "synchronize.h"
 #define MAX_READ_LENGTH 1024*1024*8
 
 #define TagNameAddChar(tag, c) do{			\
@@ -52,6 +53,7 @@ __global__ void parse_tag(Tag* tags_info, char* string){
 					st = st_lt;
 					break;
 				}
+				break;
 			}//end of case st_idle
 			case st_lt:{	
 				if('>' == cur){
@@ -125,7 +127,33 @@ __global__ void parse_tag(Tag* tags_info, char* string){
 
 }
 
+
+void cuda_parse(char *host_read_string, Tag *host_tags_info){
+	while(1){
+		syn_suspend(cond_cuda);
+		char* device_string_to_parse;
+		Tag* device_tags_info;
+
+		size_t host_string_len = strlen(host_read_string);
+		cudaMalloc((void**)&device_string_to_parse,sizeof(char)*host_string_len);
+		cudaMalloc((void**)&device_tags_info,sizeof(Tag)*TAGS_PER_TIME);
+		cudaMemcpy(device_string_to_parse,host_read_string,host_string_len,cudaMemcpyHostToDevice);
+		cudaMemcpy(device_tags_info,host_tags_info,sizeof(Tag)*TAGS_PER_TIME,cudaMemcpyHostToDevice);
+		parse_tag<<<1,1024>>>(device_tags_info, device_string_to_parse);
+		cudaMemcpy(host_tags_info,device_tags_info,sizeof(Tag)*TAGS_PER_TIME,cudaMemcpyDeviceToHost);
+		cudaFree(device_string_to_parse);
+		cudaFree(device_tags_info);
+		syn_resume(&cond_pre);
+	}
+}
+
+
 int main(int argc, char **argv) {
+
+	syn_init();
+
+	pthread_t thread_prescan, thread_cuda_parse;
+
 	char filePath[1000]="/home/jerry/Downloads/enwiki-latest-pages-meta-history4.xml-p000104986p000104998";//80.9M
 	FILE *file;
 	file = fopen(filePath,"r");
@@ -139,16 +167,11 @@ int main(int argc, char **argv) {
 	char* host_read_string;
 	simple_parse(file,host_buffer,host_tags_info,host_read_string);
 	
-	char* device_string_to_parse;
-	char* device_tags_info;
 
-	size_t host_string_len = strlen(host_read_string);
-	cudaMalloc((void**)&device_string_to_parse,sizeof(char)*host_string_len);
-	cudaMalloc((void**)&device_tags_info,sizeof(Tag)*TAGS_PER_TIME);
-	cudaMemcpy(device_string_to_parse,host_read_string,host_string_len,cudaMemcpyHostToDevice);
-	cudaMemcpy(device_tags_info,host_tags_info,sizeof(Tag)*TAGS_PER_TIME,cudaMemcpyHostToDevice);
+	pthread_create(&thread_prescan,NULL,simple_parse(file,host_buffer,host_tags_info,host_read_string),(void*)&argc);
+	pthread_create(&thread_cuda_parse,NULL,cuda_parse(host_read_string,host_tags_info),(void*)&argc);
 
-
-
+	pthread_join(thread_prescan);
+	pthread_join(thread_cuda_parse);
 
 }

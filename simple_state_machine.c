@@ -4,7 +4,8 @@
 #include "node.h"
 #include "TagArray.h"
 #include "stdafx.h"
-#include <pthread.h>
+#include "Text.h"
+#include "synchronize.h"
 #define MAX_TAGS 1000000
 #define MAX_NODES 1000000
 #define CUR pBuffer[curIndex]
@@ -44,23 +45,19 @@ void get_tag_info_of_ready_node(stackT *stackP,Tag* tags){
 }
 
 void simple_parse(_IN FILE *file, _IN char* pBuffer, _OUT Tag *s_tags_ready,_OUT char *string_read){
-	
+	fpos_t pos;
 	StackInit(&start_tags, MAX_TAGS);
-	StackInit(&nodes, MAX_NODES);
-	pBuffer = (char*)malloc(sizeof(char)*MAX_READ_LENGTH);
-	int res;
 	simple_state st;
 	st = st_Content;
-	while (res = fread(pBuffer,1,MAX_READ_LENGTH,file))
+	char cur;
+	Text text;
+	text_init(&text);
+	while ((cur = fgetc(file)) != EOF)
 	{
-	
+		text_add_char(&text,cur);//restore the char read
 		int counter = 0;//counter indicates the number of start_tags
-		int length = res;
 		int curIndex = 0;
-		while (!ISEND)
-		{
-			char cur = CUR;
-		
+
 			switch (st)
 			{
 			case st_Content:
@@ -91,8 +88,19 @@ void simple_parse(_IN FILE *file, _IN char* pBuffer, _OUT Tag *s_tags_ready,_OUT
 					st = st_Content;
 					end_tag_handle(tag_tmp);
 					//when we read TAGS_PER_TIME nodes, we will transfer them to the nodes pool
+					//and pause the read work
+					//when we resume the read work, we reset the curIndex and Text
 					if(counter%TAGS_PER_TIME == 0){
+
 						s_tags_ready = &(array_tags.tags[round*TAGS_PER_TIME]);
+						string_read = text.chars;
+						//resume the parse thread
+						syn_resume(cond_cuda);
+						//pause read thread here
+						syn_suspend(cond_pre);
+						//reset the curIndex and text
+						curIndex = 0;
+						text_init(&text);
 					}
 				}
 				break;
@@ -115,7 +123,7 @@ void simple_parse(_IN FILE *file, _IN char* pBuffer, _OUT Tag *s_tags_ready,_OUT
 					tag_tmp->id = generate_tag_id(round,counter);
 					tag_tmp->lengh = curIndex - tag_tmp->location + 1;
 					start_tag_handle(tag_tmp);
-					counter++;
+					counter++;//we get a whole tag, so we add counter by 1
 				}
 				break;
 			case st_Alt_Val:
@@ -135,6 +143,6 @@ void simple_parse(_IN FILE *file, _IN char* pBuffer, _OUT Tag *s_tags_ready,_OUT
 			}
 
 			curIndex ++;
-		}
+
 	}
 }
