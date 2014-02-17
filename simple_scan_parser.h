@@ -1,7 +1,8 @@
-
-enum _state    // ·ÖÎö×´Ì¬
+#ifndef SIMPLE_SCAN_PARSE_H
+#define SIMPLE_SCAN_PARSE_H
+enum _state    // ï¿½ï¿½ï¿½ï¿½×´Ì¬
 {
-    st_idle,        // ¿ªÊ¼
+    st_idle,        // ï¿½ï¿½Ê¼
     st_lt,
     st_txt,
     st_start_tag,
@@ -14,5 +15,7 @@ enum _state    // ·ÖÎö×´Ì¬
     st_attribute_value_pre,
     st_attribute_value,
 
-    st_end,        // ·ÖÎö½áÊø
+    st_end,        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 };
+
+#endif

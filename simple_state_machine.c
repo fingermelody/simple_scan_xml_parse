@@ -15,56 +15,77 @@
 
 stackT start_tags;
 stackT nodes;
-Tag_Array array_tags;
+Tag_Array *array_tags;
 Tag *tag_tmp;
 int node_num = 0;
-int round = 0;
+int round_read = 0;
 void start_tag_handle(Tag *start_tag){
-	StackPush(&start_tags,(stackElementT)start_tag);
+	StackPush(&start_tags,start_tag);
 	StackGetTop(&start_tags);
 }
 
-void end_tag_handle(Tag *end_tag){
-	Tag *s_tag = (Tag*)StackPop(&start_tags);	
+void end_tag_handle(){
+//	StackPop(&start_tags);
+	Tag *s_tag = (Tag*)StackPop(&start_tags);
 	s_tag->parent = ((Tag*)StackGetTop(&start_tags))->id;
 	tag_array_add(array_tags,s_tag);
-	node_num++;
 }
 
-int generate_tag_id(int round, int current){
-	return round*TAGS_PER_TIME+current;
+int generate_tag_id(int round_read, int current){
+//	return round_read*TAGS_PER_TIME+current;
+	return current;
 }
 /**
  **this function collect the location and length of each tag ready to parse
 **/
 void get_tag_info_of_ready_node(stackT *stackP,Tag* tags){
 	tags = (Tag*)malloc(sizeof(Tag)*TAGS_PER_TIME);
-	for(int i=0;i<=stackP->top;i++)
+	int i;
+	for(i=0;i<=stackP->top;i++)
 		tags[i] = *(Tag*)(stackP->contents[i]);
 	free(tags);
 }
 
-void simple_parse(_IN FILE *file, _IN char* pBuffer, _OUT Tag *s_tags_ready,_OUT char *string_read){
-	fpos_t pos;
+void* simple_parse(void* arg){
+	printf("pre_scan starts......\n");
+	simple_parse_arg *s_arg = (simple_parse_arg*) arg;
+	_IN char* file_path = s_arg->file_path;
 	StackInit(&start_tags, MAX_TAGS);
-	simple_state st;
+	array_tags = (Tag_Array*)malloc(sizeof(Tag_Array));
+	tag_array_init(array_tags);
+	printf("tags_stack ready\n");
+	enum simple_state st;
 	st = st_Content;
 	char cur;
-	Text text;
-	text_init(&text);
-	while ((cur = fgetc(file)) != EOF)
+	Text *text;
+	text = (Text*)malloc(sizeof(Text));
+	text_init(text);
+	printf("TEXT ready\n");
+	FILE *file = fopen(file_path,"r");
+	if(!file)
 	{
-		text_add_char(&text,cur);//restore the char read
-		int counter = 0;//counter indicates the number of start_tags
-		int curIndex = 0;
-
-			switch (st)
+		printf("open file failed \n");
+		return NULL;
+	}
+	printf("File ready\n");
+	int counter = 0;//counter indicates the number of whole node
+	int start_tag_num = 0;
+	int curIndex = 0;
+	while (1){
+		cur=fgetc(file);
+		if(cur == EOF){
+			printf("end of file \n");
+			break;
+		}
+		if(cur=='\0') break;
+		text_add_char(text,cur);//restore the char read
+		switch (st)
 			{
 			case st_Content:
 				if (cur == '<')
 				{
 					st = st_LT;
-					tag_init(tag_tmp);
+					tag_init(&tag_tmp);
 					tag_tmp->location = curIndex;
 				}
 				break;
@@ -86,21 +107,25 @@ void simple_parse(_IN FILE *file, _IN char* pBuffer, _OUT Tag *s_tags_ready,_OUT
 				if (cur == '>')
 				{
 					st = st_Content;
-					end_tag_handle(tag_tmp);
+					end_tag_handle();
+					counter++;
 					//when we read TAGS_PER_TIME nodes, we will transfer them to the nodes pool
 					//and pause the read work
 					//when we resume the read work, we reset the curIndex and Text
-					if(counter%TAGS_PER_TIME == 0){
-
-						s_tags_ready = &(array_tags.tags[round*TAGS_PER_TIME]);
-						string_read = text.chars;
+					if((counter+1)%TAGS_PER_TIME == 0){
+						printf("start_tag:%d, counter:%d,\n",start_tag_num,counter);
+						*(s_arg->s_tags_ready) = &(array_tags->tags[round_read*TAGS_PER_TIME]);
+						*(s_arg->string_read) = text->chars;
 						//resume the parse thread
-						syn_resume(cond_cuda);
+						pthread_cond_signal(&cond_cuda);
+						printf("scanner signal send\n");
 						//pause read thread here
-						syn_suspend(cond_pre);
+						pthread_cond_wait(&cond_prescan,&syn_mutex);
+						printf("prescan receive signal \n");
 						//reset the curIndex and text
 						curIndex = 0;
-						text_init(&text);
+						round_read++;
+						text_init(text);
 					}
 				}
 				break;
@@ -120,10 +145,10 @@ void simple_parse(_IN FILE *file, _IN char* pBuffer, _OUT Tag *s_tags_ready,_OUT
 				}else if (cur == '>')
 				{
 					st = st_Content;
-					tag_tmp->id = generate_tag_id(round,counter);
+					tag_tmp->id = generate_tag_id(round_read,counter);
 					tag_tmp->lengh = curIndex - tag_tmp->location + 1;
 					start_tag_handle(tag_tmp);
-					counter++;//we get a whole tag, so we add counter by 1
+					start_tag_num++;
 				}
 				break;
 			case st_Alt_Val:
@@ -143,6 +168,15 @@ void simple_parse(_IN FILE *file, _IN char* pBuffer, _OUT Tag *s_tags_ready,_OUT
 			}
 
 			curIndex ++;
-
 	}
+	//if we have read all of the file but there are not enough 1024 tags, we have to transfer what we've read to GPU parser.
+	if((text->index)>0){
+		*(s_arg->s_tags_ready) = &(array_tags->tags[round_read*TAGS_PER_TIME]);
+		*(s_arg->string_read) = text->chars;
+	//resume the parse thread
+		pthread_cond_signal(&cond_cuda);
+		printf("prescan send signal \n");
+		pthread_cond_wait(&cond_prescan,&syn_mutex);
+	}
+
 }

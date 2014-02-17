@@ -15,6 +15,15 @@ enum simple_state{
 	st_Empty_Tag,
 };
 
-void simple_parse(_IN FILE *file, _IN char* pBuffer, _OUT Tag *s_tags_ready,_OUT char *string_read);
+typedef struct{
+//	_IN FILE *file;
+	_IN char* file_path;
+	//_IN char* pBuffer;
+	_OUT Tag **s_tags_ready;
+	_OUT char **string_read;
+}simple_parse_arg;
+
+
+//void* simple_parse(void* arg);
 
 #endif

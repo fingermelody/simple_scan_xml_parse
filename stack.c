@@ -66,6 +66,7 @@ stackElementT StackGet(stackT *stackP, int index){
 }
 
 void stackIterate(stackT *stackP, void(*function)(stackElementT)){
-	for(int i=0;i<=stackP->top;i++)
+	int i;
+	for(i=0;i<=stackP->top;i++)
 		function(stackP->contents[i]);
 }

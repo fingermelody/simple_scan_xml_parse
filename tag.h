@@ -24,6 +24,6 @@ typedef struct _tag{
 	int attrIndex;
 }Tag;
 
-void tag_init(Tag *tag);
+void tag_init(Tag **tag);
 void tag_destroy(Tag *tag);
 #endif

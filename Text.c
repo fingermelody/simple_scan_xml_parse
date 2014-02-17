@@ -1,6 +1,7 @@
 #include "Text.h"
 void text_init(Text* text){
-	memset(text->chars,0);
+	text->chars = (char*)malloc(sizeof(char)*MAX_TEXT_LENGTH);
+	memset(text->chars,0,MAX_TEXT_LENGTH);
 	text->index = 0;
 }
 

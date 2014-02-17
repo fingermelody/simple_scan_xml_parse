@@ -1,14 +1,18 @@
+
+#include "synchronize.h"
+#include "simple_state_machine.h"
 #include "stack.h"
 #include "tag.h"
 #include "node.h"
-#include "simple_state_machine.h"
 #include "stdafx.h"
 #include "cuda_runtime.h"
 #include "cuda.h"
 #include "device_launch_parameters.h"
 #include <string.h>
 #include "simple_scan_parser.h"
-#include "synchronize.h"
+#include <time.h>
+#include <pthread.h>
+#include <unistd.h>
 #define MAX_READ_LENGTH 1024*1024*8
 
 #define TagNameAddChar(tag, c) do{			\
@@ -31,6 +35,31 @@
 	attr->valueCharIndex++;					\
 }while(0)
 
+#define HANDLE_ERROR( err ) (HandleError( err, __FILE__, __LINE__ ))
+
+//__constant__ unsigned char pBuffer[16*16*16*16*LENGTH];
+
+static void HandleError( cudaError_t err,
+                         const char *file,
+                         int line ) {
+    if (err != cudaSuccess) {
+        printf( "%s in %s at line %d\n", cudaGetErrorString( err ),
+                file, line );
+        exit( EXIT_FAILURE );
+    }
+}
+
+typedef struct{
+	char **host_read_string;
+	Tag **host_tags_info;
+}cuda_arg;
+
+extern "C"{
+	void syn_init();
+	void syn_suspend(pthread_cond_t cond);
+	void syn_resume(pthread_cond_t cond);
+	void* simple_parse(void* arg);
+}
 __global__ void parse_tag(Tag* tags_info, char* string){
 	int id = threadIdx.x;
 	Tag t = tags_info[id];
@@ -38,11 +67,8 @@ __global__ void parse_tag(Tag* tags_info, char* string){
 	int len = t.lengh;
 	
 	int curIndex = s_location;
-	int start = 0;
-	int lastLTIndex = 0;
-	int firstGTIndex = 0;
 	enum _state st = st_idle;
-	attribute *tmp_attr;
+	attribute tmp_attr;
 	while(curIndex - s_location < len){
 		char cur = string[curIndex];
 
@@ -66,7 +92,7 @@ __global__ void parse_tag(Tag* tags_info, char* string){
 			}//end of state tagstart
 			case st_start_tag:{//record tag name here
 				if(' ' == cur){
-					tmp_attr = (attribute*)malloc(sizeof(attribute));
+					memset(&tmp_attr,0,sizeof(attribute));
 					st = st_attribute_pre;
 				}else if('>' == cur){
 					st = st_idle;
@@ -108,11 +134,11 @@ __global__ void parse_tag(Tag* tags_info, char* string){
 			}
 			case st_attribute_value:{
 				if(('"'==cur)||('\''==cur)){
-					TagAddAttr((&t),*tmp_attr);
-					free(tmp_attr);
+					TagAddAttr((&t),tmp_attr);
+					//free(tmp_attr);
 					st = st_attribute_pre;
 				}else{
-					AttrValueAddChar(tmp_attr,cur);
+					AttrValueAddChar((&tmp_attr),cur);
 				}
 				break;
 			}
@@ -127,10 +153,15 @@ __global__ void parse_tag(Tag* tags_info, char* string){
 
 }
 
+void* cuda_parse(void* c_arg){
 
-void cuda_parse(char *host_read_string, Tag *host_tags_info){
 	while(1){
-		syn_suspend(cond_cuda);
+//		printf("cuda_parse start...... \n");
+		pthread_cond_wait(&cond_cuda,&syn_mutex);
+		printf("cuda receive signal\n");
+		simple_parse_arg *arg = (simple_parse_arg*)c_arg;
+		char *host_read_string = *(arg->string_read);
+		Tag *host_tags_info = *(arg->s_tags_ready);
 		char* device_string_to_parse;
 		Tag* device_tags_info;
 
@@ -143,35 +174,45 @@ void cuda_parse(char *host_read_string, Tag *host_tags_info){
 		cudaMemcpy(host_tags_info,device_tags_info,sizeof(Tag)*TAGS_PER_TIME,cudaMemcpyDeviceToHost);
 		cudaFree(device_string_to_parse);
 		cudaFree(device_tags_info);
-		syn_resume(&cond_pre);
+		pthread_cond_signal(&cond_prescan);
+		printf("cuda send signal \n");
 	}
 }
 
 
+
+
+
 int main(int argc, char **argv) {
 
-	syn_init();
-
+//
 	pthread_t thread_prescan, thread_cuda_parse;
-
-	char filePath[1000]="/home/jerry/Downloads/enwiki-latest-pages-meta-history4.xml-p000104986p000104998";//80.9M
-	FILE *file;
-	file = fopen(filePath,"r");
-	if(!file)
-	{
-		printf("open file failed \n");
-		return -1;
-	}
-	char* host_buffer;
+	pthread_t thread_resume;
+//	char filePath[1000]="/home/jerry/Downloads/enwiki-latest-pages-meta-history4.xml-p000104986p000104998";//80.9M
+	char *filePath = argv[1];
 	Tag* host_tags_info;
 	char* host_read_string;
-	simple_parse(file,host_buffer,host_tags_info,host_read_string);
-	
+	simple_parse_arg *s_arg;
+	s_arg = (simple_parse_arg*)malloc(sizeof(simple_parse_arg));
+	s_arg->file_path = filePath;
+	s_arg->s_tags_ready = (Tag**)malloc(sizeof(Tag*));
+	s_arg->string_read = (char**)malloc(sizeof(char*));
+	*(s_arg->s_tags_ready) = (Tag*)malloc(sizeof(Tag));
+	*(s_arg->string_read) = (char*)malloc(sizeof(char));
 
-	pthread_create(&thread_prescan,NULL,simple_parse(file,host_buffer,host_tags_info,host_read_string),(void*)&argc);
-	pthread_create(&thread_cuda_parse,NULL,cuda_parse(host_read_string,host_tags_info),(void*)&argc);
+	cuda_arg c_arg;
+	clock_t start,stop;
+	start = clock();
 
-	pthread_join(thread_prescan);
-	pthread_join(thread_cuda_parse);
+
+
+	pthread_create(&thread_cuda_parse,NULL, cuda_parse,(void*)s_arg);
+	pthread_create(&thread_prescan,NULL,simple_parse,(void*)s_arg);
+	pthread_join(thread_cuda_parse,NULL);
+	pthread_join(thread_prescan,NULL);
+//	stop = clock();
+//	double dur = (double)(stop - start);
+//	printf("\n total time is: %f s\n",dur/CLOCKS_PER_SEC);
+	pthread_exit(NULL);
 
 }
