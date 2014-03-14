@@ -1,0 +1,39 @@
+Simple_scan_XML_Parse: TagArray.o Text.o line_reader.o node.o simple_scan_parser.o simple_state_machine.o stack.o synchronize.o tag.o
+	nvcc --cudart static -link -o  "Simple_scan_XML_Parse"  ./TagArray.o ./Text.o ./line_reader.o ./node.o ./simple_scan_parser.o ./simple_state_machine.o ./stack.o ./synchronize.o ./tag.o   -lpthread
+
+TagArray.o: ../TagArray.c
+	nvcc -Iphread -G -g -O0  -odir "" -M -o "TagArray.d" "../TagArray.c"
+	nvcc -Iphread -G -g -O0 --compile  -x c -o  "TagArray.o" "../TagArray.c"
+
+Text.o: ../Text.c
+	nvcc -Iphread -G -g -O0  -odir "" -M -o "Text.d" "../Text.c"
+	nvcc -Iphread -G -g -O0 --compile  -x c -o  "Text.o" "../Text.c"
+
+line_reader.o: ../line_reader.c
+	nvcc -Iphread -G -g -O0  -odir "" -M -o "line_reader.d" "../line_reader.c"
+	nvcc -Iphread -G -g -O0 --compile  -x c -o  "line_reader.o" "../line_reader.c"
+
+node.o: ../node.c
+	nvcc -Iphread -G -g -O0  -odir "" -M -o "node.d" "../node.c"
+	nvcc -Iphread -G -g -O0 --compile  -x c -o  "node.o" "../node.c"
+
+simple_scan_parser.o: ../simple_scan_parser.cu
+	nvcc -Iphread -G -g -O0  -odir "" -M -o "simple_scan_parser.d" "../simple_scan_parser.cu"
+	nvcc --compile -G -Iphread -O0 -g  -x cu -o  "simple_scan_parser.o" "../simple_scan_parser.cu"
+
+simple_state_machine.o: ../simple_state_machine.c
+	nvcc -Iphread -G -g -O0  -odir "" -M -o "simple_state_machine.d" "../simple_state_machine.c"
+	nvcc -Iphread -G -g -O0 --compile  -x c -o  "simple_state_machine.o" "../simple_state_machine.c"
+
+stack.o: ../stack.c
+	nvcc -Iphread -G -g -O0  -odir "" -M -o "stack.d" "../stack.c"
+	nvcc -Iphread -G -g -O0 --compile  -x c -o  "stack.o" "../stack.c"
+
+synchronize.o: ../synchronize.c
+	nvcc -Iphread -G -g -O0  -odir "" -M -o "synchronize.d" "../synchronize.c"
+	nvcc -Iphread -G -g -O0 --compile  -x c -o  "synchronize.o" "../synchronize.c"
+
+tag.o: ../tag.c
+	nvcc -Iphread -G -g -O0  -odir "" -M -o "tag.d" "../tag.c"
+	nvcc -Iphread -G -g -O0 --compile  -x c -o  "tag.o" "../tag.c"
+

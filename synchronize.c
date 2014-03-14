@@ -4,8 +4,11 @@ int suspend_flag;
 
 void syn_init(){
 	pthread_mutex_init(&syn_mutex,NULL);
+	pthread_mutex_init(&idle_mutex,NULL);
 	pthread_cond_init(&cond_prescan,NULL);
 	pthread_cond_init(&cond_cuda,NULL);
+	pthread_cond_init(&cond_schedule,NULL);
+	pthread_cond_init(&cond_idle,NULL);
 	suspend_flag = 0;
 }
 

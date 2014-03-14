@@ -1,6 +1,6 @@
 #ifndef STRING_H
 #define STRING_H
-#define MAX_TEXT_LENGTH 1024*1024*80
+#define MAX_TEXT_LENGTH 80000000//1024*1024*80
 typedef struct{
 	char *chars;
 	int index;

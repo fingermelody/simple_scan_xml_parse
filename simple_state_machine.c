@@ -1,3 +1,4 @@
+#include <mpi.h>
 #include "simple_state_machine.h"
 #include "stack.h"
 #include "tag.h"
@@ -6,6 +7,8 @@
 #include "stdafx.h"
 #include "Text.h"
 #include "synchronize.h"
+#include "query.h"
+
 #define MAX_TAGS 1000000
 #define MAX_NODES 1000000
 #define CUR pBuffer[curIndex]
@@ -46,6 +49,11 @@ void get_tag_info_of_ready_node(stackT *stackP,Tag* tags){
 	free(tags);
 }
 
+/*
+ * analysis the basic structure information of tags while reading the whole xml file.
+ * If we read enough tags, notify the schedule thread to transfer the tags to idle slaves.
+ * After transferring this part of file, continue reading work.
+ * */
 void* simple_parse(void* arg){
 	printf("pre_scan starts......\n");
 	simple_parse_arg *s_arg = (simple_parse_arg*) arg;
@@ -117,7 +125,7 @@ void* simple_parse(void* arg){
 						*(s_arg->s_tags_ready) = &(array_tags->tags[round_read*TAGS_PER_TIME]);
 						*(s_arg->string_read) = text->chars;
 						//resume the parse thread
-						pthread_cond_signal(&cond_cuda);
+						pthread_cond_signal(&cond_schedule);
 						printf("scanner signal send\n");
 						//pause read thread here
 						pthread_cond_wait(&cond_prescan,&syn_mutex);
@@ -166,17 +174,23 @@ void* simple_parse(void* arg){
 			default:
 				break;
 			}
-
 			curIndex ++;
 	}
 	//if we have read all of the file but there are not enough 1024 tags, we have to transfer what we've read to GPU parser.
 	if((text->index)>0){
 		*(s_arg->s_tags_ready) = &(array_tags->tags[round_read*TAGS_PER_TIME]);
 		*(s_arg->string_read) = text->chars;
-	//resume the parse thread
-		pthread_cond_signal(&cond_cuda);
+	//resume the schedule thread
+		pthread_cond_signal(&cond_schedule);
 		printf("prescan send signal \n");
+		printf("the whole file's scan work completed \n");
+		file_read_over = 1;
 		pthread_cond_wait(&cond_prescan,&syn_mutex);
-	}
 
+		//then we can start to query
+		pthread_t thread_master_query;
+		int* temp_arg;
+		pthread_create(&thread_master_query,NULL,query,(void*)temp_arg);
+	}
+	return NULL;
 }

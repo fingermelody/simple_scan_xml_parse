@@ -23,7 +23,7 @@ typedef struct{
 	_OUT char **string_read;
 }simple_parse_arg;
 
+int file_read_over;
 
-//void* simple_parse(void* arg);
 
 #endif
