@@ -19,8 +19,8 @@ typedef struct{
 //	_IN FILE *file;
 	_IN char* file_path;
 	//_IN char* pBuffer;
-	_OUT Tag **s_tags_ready;
-	_OUT char **string_read;
+	_OUT tag_info **s_tags_ready;
+	_OUT Text **text_read;
 }simple_parse_arg;
 
 int file_read_over;

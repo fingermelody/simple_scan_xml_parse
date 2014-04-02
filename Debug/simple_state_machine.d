@@ -39,9 +39,9 @@
     ../node.h \
     ../tag.h \
     ../array.h \
+    ../Text.h \
     ../stack.h \
     ../TagArray.h \
-    ../Text.h \
     ../synchronize.h \
     /usr/include/pthread.h \
     /usr/include/sched.h \

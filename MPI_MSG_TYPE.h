@@ -7,6 +7,8 @@
 #define MSG_QUERY_REQUEST				 3
 #define MSG_QUERY_RESPONSE				 4
 #define MSG_IDLE						 5
+#define MSG_TEXT						 6
+#define MSG_SIG							 7
 #define MSG_TEST						 99
 #define MSG_EXIT                         100
 #endif

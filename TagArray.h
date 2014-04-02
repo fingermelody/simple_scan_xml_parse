@@ -4,10 +4,10 @@
 
 typedef struct _tag_array
 {
-	Tag *tags;
+	tag_info *tags;
 	int index;
 }Tag_Array;
 
 void tag_array_init(Tag_Array *array);
-void tag_array_add(Tag_Array *array,Tag* tag);
+void tag_array_add(Tag_Array *array,tag_info* tag);
 #endif

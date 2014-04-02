@@ -36,4 +36,5 @@
     /usr/include/string.h \
     /usr/include/xlocale.h \
     ../node.h \
-    ../array.h
+    ../array.h \
+    ../Text.h

@@ -3,6 +3,13 @@
 #define MAX_STRING 30
 #define MAX_ATTRIBUTE_NUM 5
 
+typedef struct _tag_info{
+	int id;
+	int location;
+	int lengh;
+	int parent;
+}tag_info;
+
 struct _attribute{
 	char name[MAX_STRING];
 	char value[MAX_STRING];
@@ -12,10 +19,7 @@ struct _attribute{
 typedef struct _attribute attribute;
 
 typedef struct _tag{
-	int id;
-	int location;
-	int lengh;
-	int parent;
+	tag_info info;
 
 	char name[MAX_STRING];
 	int numOfAttribute;
@@ -24,6 +28,6 @@ typedef struct _tag{
 	int attrIndex;
 }Tag;
 
-void tag_init(Tag **tag);
+void tag_init(Tag *tag);
 void tag_destroy(Tag *tag);
 #endif

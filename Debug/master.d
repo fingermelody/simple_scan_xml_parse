@@ -38,6 +38,7 @@
     ../node.h \
     ../tag.h \
     ../array.h \
+    ../Text.h \
     ../slaves.h \
     ../tools/hash_map.h \
     ../tools/linked_list.h \
@@ -51,5 +52,4 @@
     /usr/include/x86_64-linux-gnu/bits/sched.h \
     /usr/include/x86_64-linux-gnu/bits/setjmp.h \
     ../MPI_MSG_TYPE.h \
-    ../simple_state_machine.h \
-    ../Text.h
+    ../simple_state_machine.h

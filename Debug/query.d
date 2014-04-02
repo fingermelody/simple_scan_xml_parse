@@ -36,6 +36,7 @@
     ../node.h \
     ../tag.h \
     ../array.h \
+    ../Text.h \
     /usr/include/mpi/mpi.h \
     /usr/include/mpi/mpi_portable_platform.h \
     ../slaves.h \

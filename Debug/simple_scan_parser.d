@@ -103,9 +103,15 @@
     ../node.h \
     ../tag.h \
     ../array.h \
+    ../Text.h \
     ../stack.h \
     /usr/local/cuda-5.5/bin/../targets/x86_64-linux/include/cuda.h \
     ../simple_scan_parser.h \
+    /usr/include/x86_64-linux-gnu/sys/stat.h \
+    /usr/include/x86_64-linux-gnu/bits/stat.h \
+    /usr/include/fcntl.h \
+    /usr/include/x86_64-linux-gnu/bits/fcntl.h \
+    /usr/include/x86_64-linux-gnu/bits/uio.h \
     /usr/include/unistd.h \
     /usr/include/x86_64-linux-gnu/bits/posix_opt.h \
     /usr/include/x86_64-linux-gnu/bits/environments.h \
@@ -210,7 +216,6 @@
     /usr/include/mpi/openmpi/ompi/mpi/cxx/info_inln.h \
     /usr/include/mpi/openmpi/ompi/mpi/cxx/win_inln.h \
     /usr/include/mpi/openmpi/ompi/mpi/cxx/file_inln.h \
-    ../Text.h \
     ../tools/hash_map.h \
     ../tools/linked_list.h \
     /usr/lib/gcc/x86_64-linux-gnu/4.6/include/stdbool.h \
