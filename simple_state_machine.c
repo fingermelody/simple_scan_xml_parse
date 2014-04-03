@@ -85,7 +85,10 @@ void* simple_parse(void* arg){
 			printf("end of file \n");
 			break;
 		}
-		if(cur=='\0') break;
+		if(cur=='\0') {
+			printf("read error!!\n");
+			break;
+		}
 		switch (st)
 			{
 			case st_Content:
@@ -123,12 +126,6 @@ void* simple_parse(void* arg){
 					if((counter)%TAGS_PER_TIME == 0){
 						printf("start_tag:%d, counter:%d,\n",start_tag_num,counter);
 						*(s_arg->s_tags_ready) = &(array_tags->tags[round_read*TAGS_PER_TIME]);
-//						printf("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
-//						printf("id:%d length:%d location:%d\n",array_tags->tags[0].id,array_tags->tags[0].lengh,array_tags->tags[0].location);
-//						tag_info* test_tag_info = &(array_tags->tags[round_read*TAGS_PER_TIME]);
-//						printf("id:%d length:%d location:%d\n",test_tag_info[20].id,test_tag_info[20].lengh,test_tag_info[20].location);
-//						test_tag_info = *(s_arg->s_tags_ready);
-//						printf("id:%d length:%d location:%d\n",test_tag_info[20].id,test_tag_info[20].lengh,test_tag_info[20].location);
 						int text_cur_pos = ftell(file);
 						text_set(text,text_pre_pos,text_cur_pos);
 						*(s_arg->text_read) = text;
@@ -193,16 +190,17 @@ void* simple_parse(void* arg){
 		text_set(text,text_pre_pos,text_cur_pos);
 		*(s_arg->text_read) = text;
 	//resume the schedule thread
+		file_read_over = 1;
 		pthread_cond_signal(&cond_schedule);
 		printf("prescan send signal \n");
 		printf("the whole file's scan work completed \n");
-		file_read_over = 1;
-		pthread_cond_wait(&cond_prescan,&syn_mutex);
 		fclose(file);
+		pthread_cond_wait(&cond_prescan,&syn_mutex);
+//		pthread_exit(NULL);
 		//then we can start to query
-		pthread_t thread_master_query;
-		int* temp_arg;
-		pthread_create(&thread_master_query,NULL,query,(void*)temp_arg);
+//		pthread_t thread_master_query;
+//		int* temp_arg;
+//		pthread_create(&thread_master_query,NULL,query,(void*)temp_arg);
 
 	return NULL;
 }

@@ -1,103 +1,88 @@
 #include <mpi.h>
+#include <time.h>
 #include "stdafx.h"
 #include "slaves.h"
 #include "synchronize.h"
 #include "MPI_MSG_TYPE.h"
 #include "simple_state_machine.h"
 #include "Text.h"
-/*
- * search an idle slave
- * */
-int get_idle_node(){
-//	pthread_mutex_lock(&idle_mutex);
-	MPI_Request request;
-	int r = -1;
-	while( r <= 0){
-		MPI_Irecv(&idle_node[1],1,MPI_INT,1,MSG_IDLE,MPI_COMM_WORLD,&request);
-		int i;
-		for(i=1;i<=slaves_num;i++){
-			printf("slave %d, now is %d \n",i,idle_node[i]);
-			if (idle_node[i]== 1) {
-				idle_node[i] = 0;
-				r = i;
-				return r;
-			}
-		}
-		sleep(1);
-//		struct timespec ts;
-//		struct timeval tp;
-//		gettimeofday(&tp,NULL);
-//		ts.tv_sec  = tp.tv_sec;
-//		ts.tv_nsec = tp.tv_usec * 1000;
-//		ts.tv_sec += 1;
-//		pthread_cond_timedwait(&cond_idle,&idle_mutex,&ts);
-//		pthread_mutex_unlock(&idle_mutex);
-	}
-	return r;
-}
+
+
 
 /*
  * schedule thread will manage the xml file participate work, if there is an idle slave, we transfer
  * the xml file part we just get from pre-scan thread to the idle slave.
  * */
 void* schedule(void* c_arg){
+	clock_t start, finish;
 	MPI_Request request;
 	MPI_Status status;
+	start = clock();
 	while(1){
+		if(file_read_over == 0){
+			//waiting the pre-scan thread to make a xml file part that can be parsed by the slaves.
+			pthread_cond_wait(&cond_schedule, &syn_mutex);
+			simple_parse_arg *arg = (simple_parse_arg*)c_arg;
+			tag_info* host_tags_info = *(arg->s_tags_ready);
 
-		//waiting the pre-scan thread to make a xml file part that can be parsed by the slaves.
-		pthread_cond_wait(&cond_schedule, &syn_mutex);
-		simple_parse_arg *arg = (simple_parse_arg*)c_arg;
-		tag_info* host_tags_info = *(arg->s_tags_ready);
+	//		printf("master tag 20's info is following:\n");
+	//		printf("id:%d length:%d location:%d\n",host_tags_info[20].id,host_tags_info[20].lengh,host_tags_info[20].location);
 
-//		printf("master tag 20's info is following:\n");
-//		printf("id:%d length:%d location:%d\n",host_tags_info[20].id,host_tags_info[20].lengh,host_tags_info[20].location);
+			Text* text = *(arg->text_read);
+	//		change the struct Text and tag_info to bytes for transferring
+			char* bytes_of_tags_info = (char*)host_tags_info;
+			char* bytes_of_text = (char*)text;
 
-		Text* text = *(arg->text_read);
-//		change the struct Text and tag_info to bytes for transferring
-		char* bytes_of_tags_info = (char*)host_tags_info;
-		char* bytes_of_text = (char*)text;
-
-//		int dest = get_idle_node();// search a idle node
-		int dest = -1;
-		while( dest <= 0){
-
-			int i;
-			for(i=1;i<=slaves_num;i++){
-				printf("slave %d, now is %d \n",i,idle_node[i]);
-				if (idle_node[i]== 1) {
-					idle_node[i] = 0;
-					dest = i;
-					break;
+			int dest = -1;
+			while( dest <= 0){
+				int i;
+				for(i=1;i<=slaves_num;i++){
+					printf("slave %d, now is %d \n",i,idle_node[i]);
+					if (idle_node[i]== 1) {
+						idle_node[i] = 0;
+						dest = i;
+						break;
+					}
+	//				sleep(1);
 				}
+				if(dest <= 0){
+					MPI_Irecv(&idle_node[1],1,MPI_INT,1,MSG_IDLE,MPI_COMM_WORLD,&request);
+					MPI_Irecv(&idle_node[2],1,MPI_INT,2,MSG_IDLE,MPI_COMM_WORLD,&request);
+					MPI_Irecv(&idle_node[3],1,MPI_INT,3,MSG_IDLE,MPI_COMM_WORLD,&request);
+	//				MPI_Wait(&request,&status);
+				}
+//				usleep(100000);
 			}
-			if(dest <= 0){
-				MPI_Irecv(&idle_node[1],1,MPI_INT,1,MSG_IDLE,MPI_COMM_WORLD,&request);
-				MPI_Irecv(&idle_node[2],1,MPI_INT,2,MSG_IDLE,MPI_COMM_WORLD,&request);
-				MPI_Irecv(&idle_node[3],1,MPI_INT,3,MSG_IDLE,MPI_COMM_WORLD,&request);
-//				MPI_Wait(&request,&status);
-			}
+			idle_node[dest] = 0;//indicates this slave is busy now
+	//		send partial file and tag information
+			printf("sending partial file to slaves %d...\n",dest);
+			if(text == NULL)
+				printf("ERROR : host_read_string is null\n");
+			if(bytes_of_tags_info == NULL)
+				printf("ERROR : tags info is null \n");
+			int text_length = text_size(text);
+			MPI_Ssend(bytes_of_text,sizeof(Text),MPI_CHAR,dest,MSG_TEXT,MPI_COMM_WORLD);
+			MPI_Ssend(bytes_of_tags_info,TAGS_PER_TIME*sizeof(tag_info),MPI_CHAR,dest,MSG_SEND_TAG_INFO,MPI_COMM_WORLD);
+			printf("master send data successfully \n");
+			pthread_cond_signal(&cond_prescan);
 		}
-		idle_node[dest] = 0;//indicates this slave is busy now
-//		send partial file and tag information
-		printf("sending partial file to slaves %d...\n",dest);
-		if(text == NULL)
-			printf("ERROR : host_read_string is null\n");
-		if(bytes_of_tags_info == NULL)
-			printf("ERROR : tags info is null \n");
-		int text_length = text_size(text);
-		MPI_Ssend(bytes_of_text,sizeof(Text),MPI_CHAR,dest,MSG_TEXT,MPI_COMM_WORLD);
-		MPI_Ssend(bytes_of_tags_info,TAGS_PER_TIME*sizeof(tag_info),MPI_CHAR,dest,MSG_SEND_TAG_INFO,MPI_COMM_WORLD);
-		printf("master send data successfully \n");
-		pthread_cond_signal(&cond_prescan);
-//		if(file_read_over){
+		//
+		if(file_read_over == 1)
+		{
+			finish = clock();
+			double duration = (double)(finish - start)/CLOCKS_PER_SEC;
+			printf("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD,%f,please input a tag name:\n",duration);
+
+
 //			int i;
-//			for(i=1;i<=slaves_num;i++)
-//				MPI_Send(&i,0,MPI_INT,i,MSG_EXIT,MPI_COMM_WORLD);
-//			break;
-//		}
-		int idle_state;
-		int idle_rank;
+//			for(i=1;i<=3;i++)
+//				MPI_Ssend(&i,0,MPI_INT,i,MSG_EXIT,MPI_COMM_WORLD);
+//			pthread_cond_signal(&cond_prescan);
+//			pthread_exit(NULL);
+			char s[10];
+			scanf("%s",s);
+			printf("%s\n",s);
+		}
 	}
 	return NULL;
 }

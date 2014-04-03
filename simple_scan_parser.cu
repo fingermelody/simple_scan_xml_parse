@@ -275,6 +275,10 @@ void* slave_parse(void* argc){
 			printf("id:%d length:%d location:%d\n",host_tag_infos[20].id,host_tag_infos[20].lengh,host_tag_infos[20].location);
 			break;
 		case MSG_EXIT:
+			int end;
+//			MPI_Recv(&end,0,MPI_INT,0,MSG_EXIT,MPI_COMM_WORLD,&status);
+			printf("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n");
+//			pthread_exit(NULL);
 			return NULL;
 //
 		}
@@ -322,9 +326,6 @@ void* slave_parse(void* argc){
 			tag_info_ready = 0;
 			idle = 1;
 			//notify the master machine that this node has completed the partial parsing work
-
-
-
 			MPI_Isend(&idle,1,MPI_INT,0,MSG_IDLE,MPI_COMM_WORLD,&request);
 			MPI_Wait(&request,&status);
 
@@ -375,13 +376,11 @@ int main(int argc, char **argv) {
 		s_arg->text_read = (Text**)malloc(sizeof(Text*));
 		*(s_arg->s_tags_ready) = (tag_info*)malloc(sizeof(tag_info));
 		*(s_arg->text_read) = (Text*)malloc(sizeof(Text));
-		pthread_t thread_prescan, thread_schedule, thread_monitor;
+		pthread_t thread_prescan, thread_schedule;
 		pthread_create(&thread_prescan,NULL,simple_parse,(void*)s_arg);
 		pthread_create(&thread_schedule,NULL,schedule,(void*)s_arg);
-//		pthread_create(&thread_monitor,NULL,monitor_slaves,NULL);
 		pthread_join(thread_prescan,NULL);
 		pthread_join(thread_schedule,NULL);
-//		pthread_join(thread_monitor,NULL);
 	}
 	else{
 //		GDB_WAIT_ATTACH();
