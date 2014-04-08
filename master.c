@@ -15,8 +15,13 @@
  * */
 void* schedule(void* c_arg){
 	clock_t start, finish;
-	MPI_Request request;
+	MPI_Request request[3];
 	MPI_Status status;
+	int indices[slaves_num],num_completed;
+	int j;
+	for(j=0;j<slaves_num;j++)
+		request[j] = MPI_REQUEST_NULL;
+
 	start = clock();
 	while(1){
 		if(file_read_over == 0){
@@ -46,10 +51,9 @@ void* schedule(void* c_arg){
 	//				sleep(1);
 				}
 				if(dest <= 0){
-					MPI_Irecv(&idle_node[1],1,MPI_INT,1,MSG_IDLE,MPI_COMM_WORLD,&request);
-					MPI_Irecv(&idle_node[2],1,MPI_INT,2,MSG_IDLE,MPI_COMM_WORLD,&request);
-					MPI_Irecv(&idle_node[3],1,MPI_INT,3,MSG_IDLE,MPI_COMM_WORLD,&request);
-	//				MPI_Wait(&request,&status);
+					for(i=1;i<slaves_num;i++)
+						MPI_Irecv(&idle_node[i],1,MPI_INT,i,MSG_IDLE,MPI_COMM_WORLD,&request[i-1]);
+					MPI_Waitsome(slaves_num-1,request,&num_completed,indices,MPI_STATUSES_IGNORE);
 				}
 //				usleep(100000);
 			}

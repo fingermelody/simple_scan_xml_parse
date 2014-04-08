@@ -210,7 +210,7 @@ __global__ void parse_tag(tag_info* tags_info, char* s, int base, Tag* tags){
  * */
 void* slave_parse(void* argc){
 
-	MPI_Status status;
+	MPI_Status s_prob,s_recv_txt,s_recv_info;
 	MPI_Request request;
 	size_t inverted_index_map_size = 134217728; //2^27
 	tags_inverted_index = (hash_map*)malloc(sizeof(hash_map));
@@ -238,13 +238,13 @@ void* slave_parse(void* argc){
 	int l,r,ii=0;
 	//receive the partial xml file and the structure informations of tags in this part of file
 	while(1){
-		MPI_Probe(0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
-		printf("slave receive a message %d\n",status.MPI_TAG);
+		MPI_Probe(0,MPI_ANY_TAG,MPI_COMM_WORLD,&s_prob);
+		printf("slave receive a message %d\n",s_prob.MPI_TAG);
 		int count;
-		MPI_Get_count(&status,MPI_CHAR,&count);
-		switch(status.MPI_TAG){
+		MPI_Get_count(&s_prob,MPI_CHAR,&count);
+		switch(s_prob.MPI_TAG){
 		case MSG_TEXT:
-			MPI_Recv(bytes_of_text,count,MPI_CHAR,0,MSG_TEXT,MPI_COMM_WORLD,&status);
+			MPI_Recv(bytes_of_text,count,MPI_CHAR,0,MSG_TEXT,MPI_COMM_WORLD,&s_recv_txt);
 			t = (Text*)bytes_of_text;
 			base = t->offset;
 			printf("received text length is %d,offset is %d \n",t->length,t->offset);
@@ -265,7 +265,7 @@ void* slave_parse(void* argc){
 
 			break;
 		case MSG_SEND_TAG_INFO:
-			MPI_Recv(tag_info_bytes,count,MPI_CHAR,0,MSG_SEND_TAG_INFO,MPI_COMM_WORLD,&status);
+			MPI_Recv(tag_info_bytes,count,MPI_CHAR,0,MSG_SEND_TAG_INFO,MPI_COMM_WORLD,&s_recv_info);
 			tag_info_ready = 1;
 			tags_num = count/sizeof(tag_info);
 			host_tag_infos = (tag_info*)tag_info_bytes;
@@ -326,8 +326,8 @@ void* slave_parse(void* argc){
 			tag_info_ready = 0;
 			idle = 1;
 			//notify the master machine that this node has completed the partial parsing work
-			MPI_Isend(&idle,1,MPI_INT,0,MSG_IDLE,MPI_COMM_WORLD,&request);
-			MPI_Wait(&request,&status);
+			MPI_Send(&idle,1,MPI_INT,0,MSG_IDLE,MPI_COMM_WORLD);
+//			MPI_Wait(&request,&status);
 
 			printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
 		}
