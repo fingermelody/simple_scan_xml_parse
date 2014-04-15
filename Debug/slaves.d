@@ -33,4 +33,5 @@
     /usr/include/x86_64-linux-gnu/bits/wchar.h \
     /usr/lib/gcc/x86_64-linux-gnu/4.6/include/stdarg.h \
     ../slaves.h \
-    ../MPI_MSG_TYPE.h
+    ../MPI_MSG_TYPE.h \
+    ../tag.h

@@ -13,6 +13,8 @@ enum simple_state{
 	st_Start_Tag,
 	st_Alt_Val,
 	st_Empty_Tag,
+	st_Whole_Tag,
+	st_Whole_tag_pre,
 };
 
 typedef struct{

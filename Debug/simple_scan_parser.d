@@ -104,6 +104,7 @@
     ../tag.h \
     ../array.h \
     ../Text.h \
+    ../debug.h \
     ../stack.h \
     /usr/local/cuda-5.5/bin/../targets/x86_64-linux/include/cuda.h \
     ../simple_scan_parser.h \
@@ -223,5 +224,4 @@
     /usr/include/stdint.h \
     ../MPQ_hash.h \
     ../slaves.h \
-    ../MPI_MSG_TYPE.h \
-    ../debug.h
+    ../MPI_MSG_TYPE.h

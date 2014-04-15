@@ -5,9 +5,10 @@
 
 typedef struct _tag_info{
 	int id;
-	int location;
-	int lengh;
+	long location;
+	long length;
 	int parent;
+	int cuda_parse_index;
 }tag_info;
 
 struct _attribute{

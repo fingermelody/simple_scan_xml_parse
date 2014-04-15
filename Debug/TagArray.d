@@ -37,4 +37,5 @@
     /usr/include/xlocale.h \
     ../node.h \
     ../array.h \
-    ../Text.h
+    ../Text.h \
+    ../debug.h

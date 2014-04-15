@@ -5,9 +5,10 @@ void tag_info_init(tag_info* info){
 	if(info == NULL)
 		info = (tag_info*)malloc(sizeof(tag_info));
 	info->id = 0;
-	info->lengh = 0;
+	info->length = 0;
 	info->location = 0;
 	info->parent = 0;
+	info->cuda_parse_index = 0;
 }
 
 void free_tag_info(tag_info* info){

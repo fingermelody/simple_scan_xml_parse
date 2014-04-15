@@ -5,6 +5,7 @@
 typedef struct _tag_array
 {
 	tag_info *tags;
+	int* map;
 	int index;
 }Tag_Array;
 

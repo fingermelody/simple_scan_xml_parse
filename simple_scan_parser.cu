@@ -25,22 +25,22 @@
 #include "debug.h"
 
 #define TagNameAddChar(tag, c) do{			\
-	tag->name[tag->nameCharIndex] = c;		\
+	tag->name[tag->nameCharIndex%MAX_STRING] = c;		\
 	tag->nameCharIndex++;					\
 }while(0)
 
 #define TagAddAttr(tag, attr) do{			\
-	tag->attributes[tag->attrIndex]=attr;	\
+	tag->attributes[tag->attrIndex % MAX_ATTRIBUTE_NUM]=attr;	\
 	tag->attrIndex++;						\
 }while(0)
 
 #define AttrNameAddChar(attr, c) do{		\
-	attr->name[attr->nameCharIndex] = c;    \
+	attr->name[attr->nameCharIndex%MAX_STRING] = c;    \
 	attr->nameCharIndex++;					\
 }while(0)
 
 #define AttrValueAddChar(attr,c) do{		\
-	attr->value[attr->valueCharIndex] = c;  \
+	attr->value[attr->valueCharIndex%MAX_STRING] = c;  \
 	attr->valueCharIndex++;					\
 }while(0)
 
@@ -79,13 +79,8 @@ extern "C"{
 	void* monitor_slaves(void* argc);
 	void text_init(Text* text);
 	void text_add_char(Text* text, char c);
-}
-
-__global__ void gpu_test(tag_info* infos,char* string, int* ids,Tag* tags){
-	int id = threadIdx.x;
-	ids[id] = infos[id].id;
-	Tag* t = (&tags[id]);
-
+	void slave_query(int count);
+	void task_queue_init();
 }
 
 /*
@@ -93,27 +88,24 @@ __global__ void gpu_test(tag_info* infos,char* string, int* ids,Tag* tags){
  * @param: tags_info, tags' basic structure information, this rountine will complete the information in this Tag list.
  * @param: chars of partial xml file got from master.
  * */
-__global__ void parse_tag(tag_info* tags_info, char* s, int base, Tag* tags){
+__global__ void parse_tag(tag_info* tags_info, char* s, long base,long length, Tag* tags){
 
 	int id = threadIdx.x;
 	tag_info info = tags_info[id];
 
 	Tag* t = &(tags[id]);
-	int s_location = info.location;
-	int len = info.lengh;
+	long len = info.length;
 	if(len == 0) return;
 
 	t->info = info;
 
 
-
-	int curIndex = s_location;
-	int end = curIndex + len;
-	if(s[curIndex]=='<')
-		t->name[0] = 'R';
-	else
-		t->name[0] = 'E';
-//	TagNameAddChar(t,string[curIndex]);
+	long curIndex = info.cuda_parse_index;
+	long end = curIndex + len;
+//	if(s[curIndex]=='<')
+//		t->name[0] = 'R';
+//	else
+//		t->name[0] = 'E';
 
 	enum _state st = st_idle;
 	attribute tmp_attr;
@@ -121,7 +113,12 @@ __global__ void parse_tag(tag_info* tags_info, char* s, int base, Tag* tags){
 
 
 	while(curIndex  < end){
-		char cur = s[curIndex];
+		char cur = NULL;
+		if(curIndex < 0) break;
+		cur = s[curIndex];
+
+		if(cur == NULL) break;
+
 		switch(st){
 			case st_idle:{
 				//start state
@@ -193,15 +190,15 @@ __global__ void parse_tag(tag_info* tags_info, char* s, int base, Tag* tags){
 				}
 				break;
 			}
-
+			default: break;
 		}//end of switch
-		
+
 		curIndex ++;
 	}//end of while.
 
+
 	__syncthreads();
 }
-
 
 /*
  * slave thread will receive the partial XML file from master, and parse the xml into tags details,
@@ -210,7 +207,7 @@ __global__ void parse_tag(tag_info* tags_info, char* s, int base, Tag* tags){
  * */
 void* slave_parse(void* argc){
 
-	MPI_Status s_prob,s_recv_txt,s_recv_info;
+	MPI_Status s_prob,s_recv_txt,s_recv_info,s_req;
 	MPI_Request request;
 	size_t inverted_index_map_size = 134217728; //2^27
 	tags_inverted_index = (hash_map*)malloc(sizeof(hash_map));
@@ -226,56 +223,53 @@ void* slave_parse(void* argc){
 	int pf;
 	pf = open(file_path,S_IRUSR);
 
-	int base = 0;
+	long base ,end;
 	int slave_rank;
 	int text_ready = 0, tag_info_ready = 0;
 	int tags_num;
 	MPI_Comm_rank(MPI_COMM_WORLD,&slave_rank);
 
-	Text* t;
 	tag_info* host_tag_infos;
 	char* host_read_string;
-	int l,r,ii=0;
-	//receive the partial xml file and the structure informations of tags in this part of file
+	int cuda_index;
 	while(1){
 		MPI_Probe(0,MPI_ANY_TAG,MPI_COMM_WORLD,&s_prob);
+#ifdef L_DEBUG
 		printf("slave receive a message %d\n",s_prob.MPI_TAG);
+#endif
 		int count;
+		int i;
 		MPI_Get_count(&s_prob,MPI_CHAR,&count);
 		switch(s_prob.MPI_TAG){
-		case MSG_TEXT:
-			MPI_Recv(bytes_of_text,count,MPI_CHAR,0,MSG_TEXT,MPI_COMM_WORLD,&s_recv_txt);
-			t = (Text*)bytes_of_text;
-			base = t->offset;
-			printf("received text length is %d,offset is %d \n",t->length,t->offset);
-			host_read_string = (char*)malloc(t->length);
 
-		    l = lseek(pf,t->offset,SEEK_SET);
-			if(l == -1) printf("lseek failed 000000000000000000000000000000\n");
-			r = read(pf,host_read_string,t->length);
-			if(r==-1) printf("read text failed 99999999999999999999999999999\n");
-			else printf("receive text successfully, l:%d,r:%d\n",l,r);
-			printf("CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC\n");
-			printf("first 10 char of read text:%c,%c,%c,%c,%c,%c,%c,%c,%c,%c!!!\n",host_read_string[0],host_read_string[1],
-					host_read_string[2],host_read_string[3],host_read_string[4],host_read_string[5],host_read_string[6],
-					host_read_string[7],host_read_string[8],host_read_string[9]);
-//			if(ii == 1) printf("%s\n",host_read_string);
-			text_ready = 1;
-//			printf("%s\n",host_read_string);
-
-			break;
 		case MSG_SEND_TAG_INFO:
 			MPI_Recv(tag_info_bytes,count,MPI_CHAR,0,MSG_SEND_TAG_INFO,MPI_COMM_WORLD,&s_recv_info);
 			tag_info_ready = 1;
 			tags_num = count/sizeof(tag_info);
 			host_tag_infos = (tag_info*)tag_info_bytes;
-			printf("receive tag info successfully\n");
+
+			cuda_index = 0;
+			for(i=0;i<tags_num;i++){
+				host_tag_infos[i].cuda_parse_index = cuda_index;
+				cuda_index += host_tag_infos[i].length;
+			}
+			host_read_string = (char*)malloc(cuda_index);
+			for(i=0;i<tags_num;i++){
+				lseek(pf,host_tag_infos[i].location,SEEK_SET);
+				read(pf,host_read_string+host_tag_infos[i].cuda_parse_index,host_tag_infos[i].length);
+			}
+//			printf("%10s\n",host_read_string);
+			text_ready = 1;
+#ifdef L_DEBUG
 			printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-			printf("slave tag 20's info is following:\n");
-			printf("id:%d length:%d location:%d\n",host_tag_infos[20].id,host_tag_infos[20].lengh,host_tag_infos[20].location);
+#endif
+
+			break;
+		case MSG_QUERY_REQUEST:
+			slave_query(count);
 			break;
 		case MSG_EXIT:
-			int end;
+//			int end;
 //			MPI_Recv(&end,0,MPI_INT,0,MSG_EXIT,MPI_COMM_WORLD,&status);
 			printf("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n");
 //			pthread_exit(NULL);
@@ -290,18 +284,23 @@ void* slave_parse(void* argc){
 			char* device_string_to_parse;
 			Tag* device_tags;
 			tag_info* device_tag_info;
-			HANDLE_ERROR(cudaMalloc((void**)&device_string_to_parse,t->length));
-			HANDLE_ERROR(cudaMemset(device_string_to_parse,0,t->length));
+			HANDLE_ERROR(cudaMalloc((void**)&device_string_to_parse,cuda_index));
+			HANDLE_ERROR(cudaMemset(device_string_to_parse,0,cuda_index));
 			HANDLE_ERROR(cudaMalloc((void**)&device_tags,sizeof(Tag)*TAGS_PER_TIME));
 			HANDLE_ERROR(cudaMemset(device_tags,0,sizeof(Tag)*TAGS_PER_TIME));
 			HANDLE_ERROR(cudaMalloc((void**)&device_tag_info,sizeof(tag_info)*TAGS_PER_TIME));
 			HANDLE_ERROR(cudaMemset(device_tag_info,0,sizeof(tag_info)*TAGS_PER_TIME));
-			HANDLE_ERROR(cudaMemcpy(device_string_to_parse,host_read_string,t->length,cudaMemcpyHostToDevice));
+			HANDLE_ERROR(cudaMemcpy(device_string_to_parse,host_read_string,cuda_index,cudaMemcpyHostToDevice));
 			HANDLE_ERROR(cudaMemcpy(device_tag_info,host_tag_infos,sizeof(tag_info)*TAGS_PER_TIME,cudaMemcpyHostToDevice));
 
 
 //			printf("tags num is %d\n",tags_num);
-			parse_tag<<<1,tags_num>>>(device_tag_info, device_string_to_parse,base,device_tags);
+//			base = strlen(host_read_string);
+
+			parse_tag<<<1,tags_num>>>(device_tag_info, device_string_to_parse,0,strlen(host_read_string),device_tags);
+			HANDLE_ERROR(cudaPeekAtLastError());
+			HANDLE_ERROR(cudaDeviceSynchronize());
+
 
 			Tag* host_tags_buffer = (Tag*)malloc(sizeof(Tag)*TAGS_PER_TIME);//buffer for restoring the tag parse result.
 			memset(host_tags_buffer,0,sizeof(Tag)*TAGS_PER_TIME);
@@ -312,32 +311,30 @@ void* slave_parse(void* argc){
 			free(host_read_string);
 
 			memset(tag_info_bytes,0,sizeof(tag_info)*TAGS_PER_TIME);
+#ifdef L_DEBUG
 			printf("**********************************************************\n");
 			printf("name: %s,id: %d\n",host_tags_buffer[20].name,host_tags_buffer[20].info.id);
+#endif
 			for(int i=0;i< TAGS_PER_TIME;i++) if(host_tags_buffer[i].nameCharIndex>0){
 
 				char* key = host_tags_buffer[i].name;
 //				printf("name :%s\n",key);
-				int id = host_tags_buffer[i].info.id;
-				hash_map_insert(tags_inverted_index,(void*)key,(void*)(&id));
+//				int id = host_tags_buffer[i].info.id;
+				hash_map_insert(tags_inverted_index,(void*)key,&host_tags_buffer[i]);
 			}
-			free(host_tags_buffer);
+
+//			free(host_tags_buffer);
 			text_ready = 0;
 			tag_info_ready = 0;
 			idle = 1;
 			//notify the master machine that this node has completed the partial parsing work
 			MPI_Send(&idle,1,MPI_INT,0,MSG_IDLE,MPI_COMM_WORLD);
 //			MPI_Wait(&request,&status);
-
+#ifdef L_DEBUG
 			printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
+#endif
 		}
 	}
-
-//	pthread_t slave_query_thread;
-////	int* temp_arg;
-//	pthread_create(&slave_query_thread,NULL,slave_query_worker,NULL);
-//	pthread_join(slave_query_thread,NULL);
-//	return NULL;
 
 
 }
@@ -349,6 +346,7 @@ int main(int argc, char **argv) {
 	char *filePath = argv[1];
 	strcpy(file_path,filePath);
 	simple_parse_arg *s_arg;
+	task_queue_init();
 //
 	int numprocs,namelen,rank,devCount, provide_level;
 	MPI_Init_thread(&argc,&argv,MPI_THREAD_SINGLE,&provide_level);

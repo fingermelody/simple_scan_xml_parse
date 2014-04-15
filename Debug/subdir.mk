@@ -15,7 +15,8 @@ C_SRCS += \
 ../slaves.c \
 ../stack.c \
 ../synchronize.c \
-../tag.c 
+../tag.c \
+../task_queue.c 
 
 CU_SRCS += \
 ../simple_scan_parser.cu 
@@ -36,7 +37,8 @@ OBJS += \
 ./slaves.o \
 ./stack.o \
 ./synchronize.o \
-./tag.o 
+./tag.o \
+./task_queue.o 
 
 C_DEPS += \
 ./MPQ_hash.d \
@@ -50,7 +52,8 @@ C_DEPS += \
 ./slaves.d \
 ./stack.d \
 ./synchronize.d \
-./tag.d 
+./tag.d \
+./task_queue.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

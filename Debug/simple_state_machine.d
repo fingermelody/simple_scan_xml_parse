@@ -40,6 +40,7 @@
     ../tag.h \
     ../array.h \
     ../Text.h \
+    ../debug.h \
     ../stack.h \
     ../TagArray.h \
     ../synchronize.h \
@@ -47,4 +48,5 @@
     /usr/include/sched.h \
     /usr/include/x86_64-linux-gnu/bits/sched.h \
     /usr/include/x86_64-linux-gnu/bits/setjmp.h \
-    ../query.h
+    ../query.h \
+    ../task_queue.h

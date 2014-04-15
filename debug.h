@@ -8,6 +8,7 @@
 #ifndef DEBUG_H_
 #define DEBUG_H_
 
+//#define L_DEBUG 1
 int di;
 
 #define GDB_WAIT_ATTACH() do{				\
