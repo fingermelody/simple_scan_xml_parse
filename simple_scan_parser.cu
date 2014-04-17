@@ -338,14 +338,18 @@ void* slave_parse(void* argc){
 			printf("**********************************************************\n");
 			printf("name: %s,id: %d\n",host_tags_buffer[20].name,host_tags_buffer[20].info.id);
 #endif
+#ifdef TIME_TEST
+			clock_t insert_start, insert_end;
+			insert_start = clock();
+#endif
 			for(int i=0;i< TAGS_PER_TIME;i++) if(host_tags_buffer[i].nameCharIndex>0){
 
 				char* key = host_tags_buffer[i].name;
-//				printf("name :%s\n",key);
-//				int id = host_tags_buffer[i].info.id;
 				hash_map_insert(tags_inverted_index,(void*)key,&host_tags_buffer[i]);
 			}
-
+#ifdef TIME_TEST
+			insert_end = clock();
+#endif
 //			free(host_tags_buffer);
 			text_ready = 0;
 			tag_info_ready = 0;
@@ -357,11 +361,12 @@ void* slave_parse(void* argc){
 			slave_whole_finish = clock();
 			float slave_whole_time = (float)(slave_whole_finish-slave_whole_start)/CLOCKS_PER_SEC;
 			float slave_read_time = (float)(slave_read_finish-slave_read_start)/CLOCKS_PER_SEC;
+			float slave_insert_time = (float)(insert_end-insert_start)/CLOCKS_PER_SEC;
 			float cuda_parse_time;
 			cudaEventElapsedTime(&cuda_parse_time,cuda_parse_start,cuda_parse_finish);
 			cudaEventDestroy(cuda_parse_start);
 			cudaEventDestroy(cuda_parse_finish);
-			printf("slave time report:(%d)--(%f,%f,%f)\n",cuda_index,slave_whole_time,slave_read_time,cuda_parse_time);
+			printf("slave time report:(%d)--(%f,%f,%f,%f)\n",cuda_index,slave_whole_time,slave_read_time,cuda_parse_time,slave_insert_time);
 #endif
 #ifdef L_DEBUG
 			printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
