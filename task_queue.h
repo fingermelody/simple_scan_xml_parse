@@ -24,7 +24,7 @@ pthread_mutex_t mutex_task,mutex_full,mutex_empty;
 pthread_cond_t cond_full, cond_empty;
 int tasks_num;
 
-parse_task* tasks[MAX_TASK_NUM];
+parse_task** tasks;
 
 parse_task* get_task();
 int add_task(parse_task* task);

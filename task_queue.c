@@ -7,6 +7,7 @@ void task_queue_init(){
 	pthread_cond_init(&cond_full,NULL);
 	pthread_cond_init(&cond_empty,NULL);
 
+	tasks = (parse_task*)malloc(sizeof(parse_task*)*MAX_TASK_NUM);
 	tasks_num =0;
 	memset(tasks,0,sizeof(parse_task)*MAX_TASK_NUM);
 }

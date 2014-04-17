@@ -207,6 +207,10 @@ __global__ void parse_tag(tag_info* tags_info, char* s, long base,long length, T
  * */
 void* slave_parse(void* argc){
 
+#ifdef TIME_TEST
+	clock_t slave_read_start, slave_read_finish;
+	clock_t slave_whole_start, slave_whole_finish;
+#endif
 	MPI_Status s_prob,s_recv_txt,s_recv_info,s_req;
 	MPI_Request request;
 	size_t inverted_index_map_size = 134217728; //2^27
@@ -243,6 +247,9 @@ void* slave_parse(void* argc){
 		switch(s_prob.MPI_TAG){
 
 		case MSG_SEND_TAG_INFO:
+#ifdef TIME_TEST
+		slave_whole_start = clock();
+#endif
 			MPI_Recv(tag_info_bytes,count,MPI_CHAR,0,MSG_SEND_TAG_INFO,MPI_COMM_WORLD,&s_recv_info);
 			tag_info_ready = 1;
 			tags_num = count/sizeof(tag_info);
@@ -254,10 +261,16 @@ void* slave_parse(void* argc){
 				cuda_index += host_tag_infos[i].length;
 			}
 			host_read_string = (char*)malloc(cuda_index);
+#ifdef TIME_TEST
+			slave_read_start = clock();
+#endif
 			for(i=0;i<tags_num;i++){
 				lseek(pf,host_tag_infos[i].location,SEEK_SET);
 				read(pf,host_read_string+host_tag_infos[i].cuda_parse_index,host_tag_infos[i].length);
 			}
+#ifdef TIME_TEST
+			slave_read_finish = clock();
+#endif
 //			printf("%10s\n",host_read_string);
 			text_ready = 1;
 #ifdef L_DEBUG
@@ -279,11 +292,18 @@ void* slave_parse(void* argc){
 
 
 		if(text_ready && tag_info_ready){
-
+#ifdef TIME_TEST
+			cudaEvent_t cuda_parse_start, cuda_parse_finish;
+#endif
 
 			char* device_string_to_parse;
 			Tag* device_tags;
 			tag_info* device_tag_info;
+#ifdef TIME_TEST
+			cudaEventCreate(&cuda_parse_start);
+			cudaEventCreate(&cuda_parse_finish);
+			cudaEventRecord(cuda_parse_start,0);
+#endif
 			HANDLE_ERROR(cudaMalloc((void**)&device_string_to_parse,cuda_index));
 			HANDLE_ERROR(cudaMemset(device_string_to_parse,0,cuda_index));
 			HANDLE_ERROR(cudaMalloc((void**)&device_tags,sizeof(Tag)*TAGS_PER_TIME));
@@ -309,7 +329,10 @@ void* slave_parse(void* argc){
 			cudaFree(device_tags);
 			cudaFree(device_tag_info);
 			free(host_read_string);
-
+#ifdef TIME_TEST
+			cudaEventRecord(cuda_parse_finish,0);
+			cudaEventSynchronize(cuda_parse_finish);
+#endif
 			memset(tag_info_bytes,0,sizeof(tag_info)*TAGS_PER_TIME);
 #ifdef L_DEBUG
 			printf("**********************************************************\n");
@@ -329,7 +352,17 @@ void* slave_parse(void* argc){
 			idle = 1;
 			//notify the master machine that this node has completed the partial parsing work
 			MPI_Send(&idle,1,MPI_INT,0,MSG_IDLE,MPI_COMM_WORLD);
-//			MPI_Wait(&request,&status);
+
+#ifdef TIME_TEST
+			slave_whole_finish = clock();
+			float slave_whole_time = (float)(slave_whole_finish-slave_whole_start)/CLOCKS_PER_SEC;
+			float slave_read_time = (float)(slave_read_finish-slave_read_start)/CLOCKS_PER_SEC;
+			float cuda_parse_time;
+			cudaEventElapsedTime(&cuda_parse_time,cuda_parse_start,cuda_parse_finish);
+			cudaEventDestroy(cuda_parse_start);
+			cudaEventDestroy(cuda_parse_finish);
+			printf("slave time report:(%d)--(%f,%f,%f)\n",cuda_index,slave_whole_time,slave_read_time,cuda_parse_time);
+#endif
 #ifdef L_DEBUG
 			printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
 #endif

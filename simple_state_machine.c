@@ -9,7 +9,7 @@
 #include "synchronize.h"
 #include "query.h"
 #include "task_queue.h"
-
+#include "time.h"
 #define MAX_TAGS 1000000
 #define MAX_NODES 1000000
 
@@ -82,6 +82,9 @@ void* simple_parse(void* arg){
 	int start_tag_num = 0;
 	tag_tmp = (tag_info*)malloc(sizeof(tag_info));
 	char cur;
+#ifdef TIME_TEST
+	read_start = clock();
+#endif
 	while (1){
 		cur=fgetc(file);
 			if(cur == EOF){
@@ -208,11 +211,12 @@ void* simple_parse(void* arg){
 		file_read_over = 1;
 
 		fclose(file);
-//		pthread_exit(NULL);
-		//then we can start to query
-//		pthread_t thread_master_query;
-//		int* temp_arg;
-//		pthread_create(&thread_master_query,NULL,query,(void*)temp_arg);
 
+#ifdef TIME_TEST
+		task_counter = counter/TAGS_PER_TIME + 1;
+		read_finish = clock();
+//		float t = (float)(read_finish - read_start)/CLOCKS_PER_SEC;
+//		printf("pure read time is :%f\n",t);
+#endif
 	return NULL;
 }

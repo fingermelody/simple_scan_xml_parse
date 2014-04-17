@@ -7,9 +7,13 @@
 
 #ifndef DEBUG_H_
 #define DEBUG_H_
-
+#include "time.h"
 //#define L_DEBUG 1
+#define TIME_TEST
 int di;
+
+clock_t read_start, read_finish;
+int task_counter;
 
 #define GDB_WAIT_ATTACH() do{				\
     char hostname[256];						\
