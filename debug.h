@@ -10,10 +10,12 @@
 #include "time.h"
 //#define L_DEBUG 1
 #define TIME_TEST
+//#define TASK_ADD_TIME_TEST
 int di;
 
 clock_t read_start, read_finish;
-int task_counter;
+clock_t task_add_time,old_task_add_time;
+long task_counter;
 
 #define GDB_WAIT_ATTACH() do{				\
     char hostname[256];						\

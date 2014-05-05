@@ -18,7 +18,7 @@ stackT nodes;
 Tag_Array *array_tags;
 tag_info *tag_tmp;
 int node_num = 0;
-int round_read = 0;
+int task_round_read = 0;
 void start_tag_handle(tag_info *start_tag){
 	StackPush(&start_tags,start_tag);
 }
@@ -129,10 +129,10 @@ void* simple_parse(void* arg){
 						if(counter%TAGS_PER_TIME == 0){
 							//produce parse_task and add it into task queue
 							parse_task *task = (parse_task*)malloc(sizeof(parse_task));
-							task->info = &(array_tags->tags[round_read*TAGS_PER_TIME]);
+							task->info = &(array_tags->tags[task_round_read*TAGS_PER_TIME]);
 							task->tag_num = TAGS_PER_TIME;
 							add_task(task);
-							round_read++;
+							task_round_read++;
 						}
 					}
 					break;
@@ -186,10 +186,10 @@ void* simple_parse(void* arg){
 						if(counter%TAGS_PER_TIME == 0){
 							//produce parse_task and add it into task queue
 							parse_task *task = (parse_task*)malloc(sizeof(parse_task));
-							task->info = &(array_tags->tags[round_read*TAGS_PER_TIME]);
+							task->info = &(array_tags->tags[task_round_read*TAGS_PER_TIME]);
 							task->tag_num = TAGS_PER_TIME;
 							add_task(task);
-							round_read++;
+							task_round_read++;
 						}
 					}else{
 						st = st_Start_Tag;
@@ -203,10 +203,10 @@ void* simple_parse(void* arg){
 	//if we have read all of the file but there are not enough 1024 tags, we have to transfer what we've read to GPU parser.
 	if(counter%TAGS_PER_TIME !=0 ){
 			parse_task *task = (parse_task*)malloc(sizeof(parse_task));
-			task->info = &(array_tags->tags[round_read*TAGS_PER_TIME]);
+			task->info = &(array_tags->tags[task_round_read*TAGS_PER_TIME]);
 			task->tag_num = counter%TAGS_PER_TIME;
 			add_task(task);
-			round_read++;
+			task_round_read++;
 		}
 		file_read_over = 1;
 
@@ -215,8 +215,6 @@ void* simple_parse(void* arg){
 #ifdef TIME_TEST
 		task_counter = counter/TAGS_PER_TIME + 1;
 		read_finish = clock();
-//		float t = (float)(read_finish - read_start)/CLOCKS_PER_SEC;
-//		printf("pure read time is :%f\n",t);
 #endif
 	return NULL;
 }

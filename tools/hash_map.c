@@ -129,9 +129,9 @@ void hash_map_insert(hash_map *map,void *key,void *value){
 		while (head) {
 			hash_map_pair *pair = (hash_map_pair *) head->data;
 
-			// if key already exists, add the new one to the end
+			// if key already exists, add the new one to the head
 			if (map->comparator(pair->key, key) == 0) {
-				linked_list_append((linked_list*)pair->value,value);
+				linked_list_prepend((linked_list*)pair->value,value);
 				return;
 			}
 
@@ -149,7 +149,7 @@ void hash_map_insert(hash_map *map,void *key,void *value){
 
 		linked_list_prepend(list, pair);
 
-		linked_list_append(map->keys, key);
+//		linked_list_prepend(map->keys, key);
 }
 
 void hash_map_remove(hash_map *map, void *key) {

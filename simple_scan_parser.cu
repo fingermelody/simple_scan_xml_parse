@@ -210,6 +210,7 @@ void* slave_parse(void* argc){
 #ifdef TIME_TEST
 	clock_t slave_read_start, slave_read_finish;
 	clock_t slave_whole_start, slave_whole_finish;
+	clock_t pre_whole_start = 0;
 #endif
 	MPI_Status s_prob,s_recv_txt,s_recv_info,s_req;
 	MPI_Request request;
@@ -362,11 +363,14 @@ void* slave_parse(void* argc){
 			float slave_whole_time = (float)(slave_whole_finish-slave_whole_start)/CLOCKS_PER_SEC;
 			float slave_read_time = (float)(slave_read_finish-slave_read_start)/CLOCKS_PER_SEC;
 			float slave_insert_time = (float)(insert_end-insert_start)/CLOCKS_PER_SEC;
+			float dur_btw_starts =(float)(slave_whole_start - pre_whole_start)/CLOCKS_PER_SEC;
 			float cuda_parse_time;
 			cudaEventElapsedTime(&cuda_parse_time,cuda_parse_start,cuda_parse_finish);
 			cudaEventDestroy(cuda_parse_start);
 			cudaEventDestroy(cuda_parse_finish);
-			printf("slave time report:(%d)--(%f,%f,%f,%f)\n",cuda_index,slave_whole_time,slave_read_time,cuda_parse_time,slave_insert_time);
+			printf("slave time report:(%d)--(%f,%f,%f,%f,%f)\n",
+					cuda_index,slave_whole_time,slave_read_time,cuda_parse_time,slave_insert_time,dur_btw_starts);
+			pre_whole_start = slave_whole_start;
 #endif
 #ifdef L_DEBUG
 			printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
@@ -374,7 +378,7 @@ void* slave_parse(void* argc){
 		}
 	}
 
-
+return NULL;
 }
 
 

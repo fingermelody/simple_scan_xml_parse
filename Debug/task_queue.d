@@ -21,4 +21,5 @@
     /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
     /usr/include/x86_64-linux-gnu/bits/setjmp.h \
     ../tag.h \
-    ../Text.h
+    ../Text.h \
+    ../debug.h

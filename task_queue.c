@@ -1,5 +1,5 @@
 #include "task_queue.h"
-
+#include "debug.h"
 void task_queue_init(){
 	pthread_mutex_init(&mutex_task,NULL);
 	pthread_mutex_init(&mutex_full,NULL);
@@ -7,17 +7,24 @@ void task_queue_init(){
 	pthread_cond_init(&cond_full,NULL);
 	pthread_cond_init(&cond_empty,NULL);
 
-	tasks = (parse_task*)malloc(sizeof(parse_task*)*MAX_TASK_NUM);
+	tasks = (parse_task**)malloc(sizeof(parse_task*)*MAX_TASK_NUM);
 	tasks_num =0;
-	memset(tasks,0,sizeof(parse_task)*MAX_TASK_NUM);
+	memset(tasks,0,sizeof(parse_task*)*MAX_TASK_NUM);
 }
 
 int add_task(parse_task* task){
+
 	pthread_mutex_lock(&mutex_task);
 	if(tasks_num >= MAX_TASK_NUM){
 		pthread_cond_wait(&cond_full,&mutex_task);
 	}
 	tasks[tasks_num++] = task;
+#ifdef TASK_ADD_TIME_TEST
+	task_add_time = clock();
+	float task_crt_dur = (float)(task_add_time - old_task_add_time)/CLOCKS_PER_SEC;
+	printf("adding a task costs %f\n",task_crt_dur);
+	old_task_add_time = task_add_time;
+#endif
 	pthread_mutex_unlock(&mutex_task);
 	if(tasks_num == 1) pthread_cond_signal(&cond_empty);
 
