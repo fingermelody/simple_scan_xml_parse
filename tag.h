@@ -30,5 +30,6 @@ typedef struct _tag{
 }Tag;
 
 void tag_init(Tag *tag);
+void tag_info_init(tag_info* info);
 void tag_destroy(Tag *tag);
 #endif

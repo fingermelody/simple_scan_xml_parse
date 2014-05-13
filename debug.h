@@ -9,12 +9,21 @@
 #define DEBUG_H_
 #include "time.h"
 //#define L_DEBUG 1
-#define TIME_TEST
+//#define TIME_TEST
 //#define TASK_ADD_TIME_TEST
+#define MULTI_READ_TIME_TEST
+#define MASTER_TIME_TEST
+//#define TASK_ADD_TIME_TEST
+//#define TASK_GET_TIME_TEST
+#define TASK_NUM_TEST
+#define READ_TEST
+#define SINGLE_THREAD_TIME_TEST
+#define HOST_TIME_TEST
 int di;
 
 clock_t read_start, read_finish;
 clock_t task_add_time,old_task_add_time;
+clock_t task_get_time,old_task_get_time;
 long task_counter;
 
 #define GDB_WAIT_ATTACH() do{				\

@@ -1,0 +1,1 @@
+-np 4 -byslot ./Debug/Simple_scan_XML_Parse /home/jerry/Downloads/enwiki-latest-pages-meta-history4.xml-80 2

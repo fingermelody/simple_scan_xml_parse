@@ -1,3 +1,4 @@
+/*
 #ifndef SIMPLE_STATE_MACHINE_H
 #define SIMPLE_STATE_MACHINE_H
 
@@ -29,3 +30,4 @@ int file_read_over;
 
 
 #endif
+*/

@@ -1,20 +1,18 @@
-/master.o : ../master.c \
+/simple_parser.o : ../simple_parser.c \
     /usr/include/mpi/mpi.h \
     /usr/lib/gcc/x86_64-linux-gnu/4.6/include/stddef.h \
     /usr/include/mpi/mpi_portable_platform.h \
-    /usr/include/time.h \
+    ../simple_parser.h \
+    ../stdafx.h \
+    /usr/include/stdio.h \
     /usr/include/features.h \
     /usr/include/x86_64-linux-gnu/bits/predefs.h \
     /usr/include/x86_64-linux-gnu/sys/cdefs.h \
     /usr/include/x86_64-linux-gnu/bits/wordsize.h \
     /usr/include/x86_64-linux-gnu/gnu/stubs.h \
     /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
-    /usr/include/x86_64-linux-gnu/bits/time.h \
     /usr/include/x86_64-linux-gnu/bits/types.h \
     /usr/include/x86_64-linux-gnu/bits/typesizes.h \
-    /usr/include/xlocale.h \
-    ../stdafx.h \
-    /usr/include/stdio.h \
     /usr/include/libio.h \
     /usr/include/_G_config.h \
     /usr/include/wchar.h \
@@ -28,30 +26,26 @@
     /usr/include/x86_64-linux-gnu/bits/endian.h \
     /usr/include/x86_64-linux-gnu/bits/byteswap.h \
     /usr/include/x86_64-linux-gnu/sys/types.h \
+    /usr/include/time.h \
     /usr/include/x86_64-linux-gnu/sys/select.h \
     /usr/include/x86_64-linux-gnu/bits/select.h \
     /usr/include/x86_64-linux-gnu/bits/sigset.h \
+    /usr/include/x86_64-linux-gnu/bits/time.h \
     /usr/include/x86_64-linux-gnu/sys/sysmacros.h \
     /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
     /usr/include/alloca.h \
     /usr/include/string.h \
+    /usr/include/xlocale.h \
     ../node.h \
     ../tag.h \
     ../array.h \
     ../Text.h \
     ../debug.h \
-    ../slaves.h \
-    ../tools/hash_map.h \
-    ../tools/linked_list.h \
-    /usr/lib/gcc/x86_64-linux-gnu/4.6/include/stdbool.h \
-    /usr/lib/gcc/x86_64-linux-gnu/4.6/include/stdint.h \
-    /usr/include/stdint.h \
-    /usr/include/x86_64-linux-gnu/bits/wchar.h \
-    ../synchronize.h \
+    ../multi_read.h \
+    ../stack.h \
+    ../TagArray.h \
+    ../task_queue.h \
     /usr/include/pthread.h \
     /usr/include/sched.h \
     /usr/include/x86_64-linux-gnu/bits/sched.h \
-    /usr/include/x86_64-linux-gnu/bits/setjmp.h \
-    ../MPI_MSG_TYPE.h \
-    ../multi_read.h \
-    ../task_queue.h
+    /usr/include/x86_64-linux-gnu/bits/setjmp.h

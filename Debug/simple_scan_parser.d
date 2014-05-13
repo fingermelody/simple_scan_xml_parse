@@ -92,7 +92,9 @@
     /usr/include/sched.h \
     /usr/include/x86_64-linux-gnu/bits/sched.h \
     /usr/include/x86_64-linux-gnu/bits/setjmp.h \
-    ../simple_state_machine.h \
+    ../stack.h \
+    ../tag.h \
+    ../node.h \
     ../stdafx.h \
     /usr/include/stdio.h \
     /usr/include/libio.h \
@@ -100,14 +102,11 @@
     /usr/include/wchar.h \
     /usr/lib/gcc/x86_64-linux-gnu/4.6/include/stdarg.h \
     /usr/include/x86_64-linux-gnu/bits/sys_errlist.h \
-    ../node.h \
-    ../tag.h \
     ../array.h \
     ../Text.h \
     ../debug.h \
-    ../stack.h \
     /usr/local/cuda-5.5/bin/../targets/x86_64-linux/include/cuda.h \
-    ../simple_scan_parser.h \
+    /usr/include/x86_64-linux-gnu/sys/time.h \
     /usr/include/x86_64-linux-gnu/sys/stat.h \
     /usr/include/x86_64-linux-gnu/bits/stat.h \
     /usr/include/fcntl.h \
@@ -224,4 +223,8 @@
     /usr/include/stdint.h \
     ../MPQ_hash.h \
     ../slaves.h \
-    ../MPI_MSG_TYPE.h
+    ../MPI_MSG_TYPE.h \
+    ../simple_scan_parser.h \
+    ../multi_read.h \
+    ../simple_parser.h \
+    ../TagArray.h

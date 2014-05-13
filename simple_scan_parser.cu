@@ -1,5 +1,4 @@
 #include "synchronize.h"
-#include "simple_state_machine.h"
 #include "stack.h"
 #include "tag.h"
 #include "node.h"
@@ -8,7 +7,7 @@
 #include "cuda.h"
 #include "device_launch_parameters.h"
 #include <string.h>
-#include "simple_scan_parser.h"
+#include <sys/time.h>
 #include <time.h>
 #include <pthread.h>
 #include <sys/types.h>
@@ -23,6 +22,9 @@
 #include "slaves.h"
 #include "MPI_MSG_TYPE.h"
 #include "debug.h"
+#include "simple_scan_parser.h"
+#include "multi_read.h"
+#include "simple_parser.h"
 
 #define TagNameAddChar(tag, c) do{			\
 	tag->name[tag->nameCharIndex%MAX_STRING] = c;		\
@@ -67,7 +69,6 @@ extern "C"{
 	void syn_init();
 	void syn_suspend(pthread_cond_t cond);
 	void syn_resume(pthread_cond_t cond);
-	void* simple_parse(void* arg);
 	void hash_map_init(hash_map *map, size_t capacity, hash_map_comparator comparator, hash_map_hash_func hash_func);
 	void hash_map_insert(hash_map *map, void *key, void *value);
 	void prepareCryptTable();
@@ -81,6 +82,7 @@ extern "C"{
 	void text_add_char(Text* text, char c);
 	void slave_query(int count);
 	void task_queue_init();
+	void multi_read(char* filename,int thread_num);
 }
 
 /*
@@ -212,8 +214,7 @@ void* slave_parse(void* argc){
 	clock_t slave_whole_start, slave_whole_finish;
 	clock_t pre_whole_start = 0;
 #endif
-	MPI_Status s_prob,s_recv_txt,s_recv_info,s_req;
-	MPI_Request request;
+	MPI_Status s_prob,s_recv_info;
 	size_t inverted_index_map_size = 134217728; //2^27
 	tags_inverted_index = (hash_map*)malloc(sizeof(hash_map));
 	hash_map_init(tags_inverted_index,inverted_index_map_size,MPQ_comparator,hash_map_MPQ_hash_func);
@@ -228,7 +229,6 @@ void* slave_parse(void* argc){
 	int pf;
 	pf = open(file_path,S_IRUSR);
 
-	long base ,end;
 	int slave_rank;
 	int text_ready = 0, tag_info_ready = 0;
 	int tags_num;
@@ -386,8 +386,8 @@ char processor_name[MPI_MAX_PROCESSOR_NAME];
 
 int main(int argc, char **argv) {
 	char *filePath = argv[1];
+	int thread_num = atoi(argv[2]);
 	strcpy(file_path,filePath);
-	simple_parse_arg *s_arg;
 	task_queue_init();
 //
 	int numprocs,namelen,rank,devCount, provide_level;
@@ -406,21 +406,24 @@ int main(int argc, char **argv) {
 	printf("set slaves num %d \n",slaves_num);
 	if(rank==0){
 //		GDB_WAIT_ATTACH();
-		//initial values
 		printf("provide level is :%d\n",provide_level);
-		file_read_over = 0;
 		slave_parse_stop = 0;
-		s_arg = (simple_parse_arg*)malloc(sizeof(simple_parse_arg));
-		s_arg->file_path = filePath;
-		s_arg->s_tags_ready = (tag_info**)malloc(sizeof(tag_info*));
-		s_arg->text_read = (Text**)malloc(sizeof(Text*));
-		*(s_arg->s_tags_ready) = (tag_info*)malloc(sizeof(tag_info));
-		*(s_arg->text_read) = (Text*)malloc(sizeof(Text));
-		pthread_t thread_prescan, thread_schedule;
-		pthread_create(&thread_prescan,NULL,simple_parse,(void*)s_arg);
-		pthread_create(&thread_schedule,NULL,schedule,(void*)s_arg);
-		pthread_join(thread_prescan,NULL);
+#ifdef HOST_TIME_TEST
+		struct timeval host_start, host_stop;
+		gettimeofday(&host_start,NULL);
+		double start = host_start.tv_sec + host_start.tv_usec/1000000.0;
+#endif
+		pthread_t thread_schedule;
+		pthread_create(&thread_schedule,NULL,schedule,NULL);
+		multi_read(filePath,thread_num);
 		pthread_join(thread_schedule,NULL);
+		printf("-------------------------------------------------\n");
+#ifdef HOST_TIME_TEST
+		gettimeofday(&host_stop,NULL);
+		double stop = host_stop.tv_sec + host_stop.tv_usec/1000000.0;
+		printf("host time reprot:(%.6lf,%.6lf,%.6lf)\n",start,stop,stop-start);
+		printf("-------------------------------------------------\n");
+#endif
 	}
 	else{
 //		GDB_WAIT_ATTACH();

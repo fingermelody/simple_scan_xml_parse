@@ -25,8 +25,13 @@ int add_task(parse_task* task){
 	printf("adding a task costs %f\n",task_crt_dur);
 	old_task_add_time = task_add_time;
 #endif
+
+#ifdef TASK_NUM_TEST
+	task_counter++;
+#endif
+
 	pthread_mutex_unlock(&mutex_task);
-	if(tasks_num == 1) pthread_cond_signal(&cond_empty);
+	if(tasks_num >= 1) pthread_cond_signal(&cond_empty);
 
 	return 0;
 }
@@ -38,11 +43,21 @@ parse_task* get_task(){
 	}
 	parse_task* task;
 	task = tasks[--tasks_num];
+#ifdef TASK_GET_TIME_TEST
+	task_get_time = clock();
+	float task_crt_dur = (float)(task_add_time - old_task_add_time)/CLOCKS_PER_SEC;
+	printf("getting a task costs %f\n",task_crt_dur);
+	old_task_get_time = task_get_time;
+#endif
 	pthread_mutex_unlock(&mutex_task);
 	if(tasks_num == MAX_TASK_NUM-1) pthread_cond_signal(&cond_full);
 	return task;
 }
 
 int task_queue_is_empty(){
+//	pthread_mutex_lock(&mutex_task);
+//	int result = (tasks_num==0)?1:0;
+//	pthread_mutex_unlock(&mutex_task);
+//	return result;
 	return (tasks_num==0)?1:0;
 }

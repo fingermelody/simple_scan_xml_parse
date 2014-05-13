@@ -48,7 +48,8 @@ void StackPush(stackT *stackP, stackElementT element){
 stackElementT StackPop(stackT *stackP){
 	if (StackIsEmpty(stackP)) {
     fprintf(stderr, "Can't pop element from stack: stack is empty.\n");
-    exit(1);  /* Exit, returning error code. */
+//    exit(1);  /* Exit, returning error code. */
+    return NULL;
   }
 	return stackP->contents[stackP->top --];
 }

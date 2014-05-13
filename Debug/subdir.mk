@@ -9,8 +9,11 @@ C_SRCS += \
 ../Text.c \
 ../line_reader.c \
 ../master.c \
+../multi_read.c \
 ../node.c \
 ../query.c \
+../reader.c \
+../simple_parser.c \
 ../simple_state_machine.c \
 ../slaves.c \
 ../stack.c \
@@ -30,8 +33,11 @@ OBJS += \
 ./Text.o \
 ./line_reader.o \
 ./master.o \
+./multi_read.o \
 ./node.o \
 ./query.o \
+./reader.o \
+./simple_parser.o \
 ./simple_scan_parser.o \
 ./simple_state_machine.o \
 ./slaves.o \
@@ -46,8 +52,11 @@ C_DEPS += \
 ./Text.d \
 ./line_reader.d \
 ./master.d \
+./multi_read.d \
 ./node.d \
 ./query.d \
+./reader.d \
+./simple_parser.d \
 ./simple_state_machine.d \
 ./slaves.d \
 ./stack.d \

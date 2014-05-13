@@ -1,3 +1,4 @@
+/*
 #include <mpi.h>
 #include "simple_state_machine.h"
 #include "stack.h"
@@ -37,9 +38,9 @@ int generate_tag_id(int round_read, int current){
 //	return round_read*TAGS_PER_TIME+current;
 	return current;
 }
-/**
+*
  **this function collect the location and length of each tag ready to parse
-**/
+*
 void get_tag_info_of_ready_node(stackT *stackP,Tag* tags){
 	tags = (Tag*)malloc(sizeof(Tag)*TAGS_PER_TIME);
 	int i;
@@ -48,11 +49,11 @@ void get_tag_info_of_ready_node(stackT *stackP,Tag* tags){
 	free(tags);
 }
 
-/*
+
  * analysis the basic structure information of tags while reading the whole xml file.
  * If we read enough tags, notify the schedule thread to transfer the tags to idle slaves.
  * After transferring this part of file, continue reading work.
- * */
+ *
 void* simple_parse(void* arg){
 //	printf("pre_scan starts......\n");
 	simple_parse_arg *s_arg = (simple_parse_arg*) arg;
@@ -218,3 +219,4 @@ void* simple_parse(void* arg){
 #endif
 	return NULL;
 }
+*/
