@@ -72,6 +72,10 @@ void* schedule(void* c_arg){
 		double dur = stop - start;
 		printf(" master time report\n%ld--(%f,%f,%f)\n",task_counter,start,stop,dur);
 #endif
+		int i;
+		char end;
+		for(i=1;i<=slaves_num;i++)
+			MPI_Send(&end,0,MPI_CHAR,i,MSG_EXIT,MPI_COMM_WORLD);
 		return NULL;
 		/*
 #ifndef READ_TEST

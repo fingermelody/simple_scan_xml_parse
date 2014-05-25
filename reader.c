@@ -6,7 +6,7 @@
 #include "reader.h"
 #include "task_queue.h"
 
-read_buf buffer;
+//read_buf buffer;
 
 
 void reader_init(reader* freader,_IN simple_parser* parser,_IN char* file_path, _IN long offset,_IN long length){
@@ -14,36 +14,38 @@ void reader_init(reader* freader,_IN simple_parser* parser,_IN char* file_path, 
 	freader->length = length;
 	freader->offset = offset;
 	freader->parser = parser;
+	freader->buffer = (read_buf*)malloc(sizeof(read_buf));
+	memset(freader->buffer->buf,0,BUF_SIZE);
+	freader->buffer->index = 0;
 	freader->pf = open(freader->file_path,S_IRUSR);
 }
 
 
 int reader_read_and_handle(reader* freader){
 
-	buffer.index = 0;
 	int chunks = freader->length/BUF_SIZE;
 	int i,j;
 	long current, offset;
 	offset = freader->offset;
 	for(i=0;i<chunks;i++){
-		pread(freader->pf,buffer.buf,BUF_SIZE,offset+i*BUF_SIZE);
-		buffer.size = BUF_SIZE;
+		pread(freader->pf,freader->buffer->buf,BUF_SIZE,offset+i*BUF_SIZE);
+		freader->buffer->size = BUF_SIZE;
 		if(freader->parser != NULL){
-			for(j=0;j<buffer.size;j++){
+			for(j=0;j<freader->buffer->size;j++){
 				current = offset +i*BUF_SIZE + j;
-				if(buffer.buf[j] == EOF) break;
-				freader->parser->char_handler(freader->parser,buffer.buf[j],current);
+				if(freader->buffer->buf[j]==EOF) break;
+				freader->parser->char_handler(freader->parser,freader->buffer->buf[j],current);
 			}
 		}
 	}
 	if(freader->length%BUF_SIZE != 0){
-		buffer.size = freader->length%BUF_SIZE;
-		pread(freader->pf,buffer.buf,buffer.size, offset + i*BUF_SIZE);
+		freader->buffer->size = freader->length%BUF_SIZE;
+		pread(freader->pf,freader->buffer->buf,freader->buffer->size, offset + i*BUF_SIZE);
 		if(freader->parser != NULL){
-			for(j=0;j<buffer.size;j++){
+			for(j=0;j<freader->buffer->size;j++){
 				current = offset + i*BUF_SIZE + j;
-				if(buffer.buf[j] == EOF) break;
-				freader->parser->char_handler(freader->parser,buffer.buf[j],current);
+				if(freader->buffer->buf[j]==EOF) break;
+				freader->parser->char_handler(freader->parser,freader->buffer->buf[j],current);
 			}
 		}
 	}
@@ -58,16 +60,16 @@ int reader_seam(reader* freader){
 	do{
 		if(freader->parser->st == st_Content)
 			break;
-		buffer.size = BUF_SIZE;
-		pread(freader->pf,buffer.buf,BUF_SIZE,offset+i*BUF_SIZE);
+		freader->buffer->size = BUF_SIZE;
+		pread(freader->pf,freader->buffer->buf,BUF_SIZE,offset+i*BUF_SIZE);
 		if(freader->parser != NULL){
-			for(j=0;j<buffer.size;j++){
+			for(j=0;j<freader->buffer->size;j++){
 				current = offset + i*BUF_SIZE + j;
-				if(buffer.buf[j] == EOF){
+				if(freader->buffer->buf[j] == EOF){
 					break;
 					seam_over = 1;
 				}
-				freader->parser->char_handler(freader->parser,buffer.buf[j],current);
+				freader->parser->char_handler(freader->parser,freader->buffer->buf[j],current);
 				if(freader->parser->st == st_Content){
 					seam_over = 1;
 					break;
@@ -108,5 +110,9 @@ int reader_seam(reader* freader){
 	return 0;
 }
 
-
+int reader_destroy(reader* freader){
+	close(freader->pf);
+	free(freader->buffer);
+	return 0;
+}
 

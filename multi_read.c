@@ -36,7 +36,6 @@ void* single_read(void* arg){
 
 void multi_read(char* filename, int thread_num){
 	file_read_over = 0;
-	task_queue_init();
 	if(thread_num <= 0) return;
 #ifdef MULTI_READ_TIME_TEST
 	struct timeval tim;

@@ -9,16 +9,17 @@
 #define DEBUG_H_
 #include "time.h"
 //#define L_DEBUG 1
-//#define TIME_TEST
+#define TIME_TEST
 //#define TASK_ADD_TIME_TEST
 #define MULTI_READ_TIME_TEST
 #define MASTER_TIME_TEST
 //#define TASK_ADD_TIME_TEST
 //#define TASK_GET_TIME_TEST
 #define TASK_NUM_TEST
-#define READ_TEST
+//#define READ_TEST
 #define SINGLE_THREAD_TIME_TEST
 #define HOST_TIME_TEST
+#define CUDA_TIME_TEST
 int di;
 
 clock_t read_start, read_finish;

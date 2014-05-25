@@ -16,6 +16,7 @@ typedef struct _reader{
 	long offset;
 	long length;
 	char* file_path;
+	read_buf* buffer;
 	simple_parser* parser;
 }reader;
 

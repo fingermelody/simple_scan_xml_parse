@@ -213,6 +213,9 @@ void* slave_parse(void* argc){
 	clock_t slave_read_start, slave_read_finish;
 	clock_t slave_whole_start, slave_whole_finish;
 	clock_t pre_whole_start = 0;
+	float whole_cuda_parse = 0.0;
+	long all_tasks_length = 0;
+	long slave_tasks = 0;
 #endif
 	MPI_Status s_prob,s_recv_info;
 	size_t inverted_index_map_size = 134217728; //2^27
@@ -237,7 +240,8 @@ void* slave_parse(void* argc){
 	tag_info* host_tag_infos;
 	char* host_read_string;
 	int cuda_index;
-	while(1){
+	int over = 0;
+	while(!over){
 		MPI_Probe(0,MPI_ANY_TAG,MPI_COMM_WORLD,&s_prob);
 #ifdef L_DEBUG
 		printf("slave receive a message %d\n",s_prob.MPI_TAG);
@@ -250,6 +254,7 @@ void* slave_parse(void* argc){
 		case MSG_SEND_TAG_INFO:
 #ifdef TIME_TEST
 		slave_whole_start = clock();
+		slave_tasks ++;
 #endif
 			MPI_Recv(tag_info_bytes,count,MPI_CHAR,0,MSG_SEND_TAG_INFO,MPI_COMM_WORLD,&s_recv_info);
 			tag_info_ready = 1;
@@ -287,20 +292,18 @@ void* slave_parse(void* argc){
 //			MPI_Recv(&end,0,MPI_INT,0,MSG_EXIT,MPI_COMM_WORLD,&status);
 			printf("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n");
 //			pthread_exit(NULL);
-			return NULL;
+			over = 1;
+			break;
 //
 		}
 
-
 		if(text_ready && tag_info_ready){
-#ifdef TIME_TEST
-			cudaEvent_t cuda_parse_start, cuda_parse_finish;
-#endif
 
 			char* device_string_to_parse;
 			Tag* device_tags;
 			tag_info* device_tag_info;
-#ifdef TIME_TEST
+#ifdef CUDA_TIME_TEST
+			cudaEvent_t cuda_parse_start, cuda_parse_finish;
 			cudaEventCreate(&cuda_parse_start);
 			cudaEventCreate(&cuda_parse_finish);
 			cudaEventRecord(cuda_parse_start,0);
@@ -330,7 +333,7 @@ void* slave_parse(void* argc){
 			cudaFree(device_tags);
 			cudaFree(device_tag_info);
 			free(host_read_string);
-#ifdef TIME_TEST
+#ifdef CUDA_TIME_TEST
 			cudaEventRecord(cuda_parse_finish,0);
 			cudaEventSynchronize(cuda_parse_finish);
 #endif
@@ -348,6 +351,7 @@ void* slave_parse(void* argc){
 				char* key = host_tags_buffer[i].name;
 				hash_map_insert(tags_inverted_index,(void*)key,&host_tags_buffer[i]);
 			}
+
 #ifdef TIME_TEST
 			insert_end = clock();
 #endif
@@ -366,18 +370,21 @@ void* slave_parse(void* argc){
 			float dur_btw_starts =(float)(slave_whole_start - pre_whole_start)/CLOCKS_PER_SEC;
 			float cuda_parse_time;
 			cudaEventElapsedTime(&cuda_parse_time,cuda_parse_start,cuda_parse_finish);
+			whole_cuda_parse += cuda_parse_time;
+			all_tasks_length += cuda_index;
 			cudaEventDestroy(cuda_parse_start);
 			cudaEventDestroy(cuda_parse_finish);
-			printf("slave time report:(%d)--(%f,%f,%f,%f,%f)\n",
-					cuda_index,slave_whole_time,slave_read_time,cuda_parse_time,slave_insert_time,dur_btw_starts);
+//			printf("slave time report:(%d)--(%f,%f,%f,%f,%f)\n",
+//					cuda_index,slave_whole_time,slave_read_time,cuda_parse_time,slave_insert_time,dur_btw_starts);
 			pre_whole_start = slave_whole_start;
-#endif
-#ifdef L_DEBUG
-			printf("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\n");
 #endif
 		}
 	}
-
+	if(slave_tasks!=0){
+		printf("slave average report,(slave_tasks, average_cuda_parse, average_tasks_length)\n"
+				"                    (%ld,%.6f,%ld)\n",
+				slave_tasks, whole_cuda_parse/slave_tasks, all_tasks_length/slave_tasks);
+	}
 return NULL;
 }
 
