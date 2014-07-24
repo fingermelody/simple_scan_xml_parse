@@ -31,6 +31,7 @@ typedef struct{
 	enum simple_state st;
 	stackT *start_tags;
 	Tag_Array *array_tags;
+	Tag_Array *un_start_tags;
 	parser_char_handler char_handler;
 
 	unsigned long start_tag_num;
@@ -40,6 +41,8 @@ typedef struct{
 	int unresolved_end_tag;
 	int unresolved_start_tag;
 
+
+	unsigned long id_base;
 	tag_info* tag_tmp;
 }simple_parser;
 

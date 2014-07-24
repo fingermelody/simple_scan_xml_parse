@@ -43,13 +43,13 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: Simple_scan_XML_Parse secondary-outputs
+all: Simple_scan_XML_Parse
 
 # Tool invocations
 Simple_scan_XML_Parse: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: NVCC Linker'
-	/usr/local/cuda-5.5/bin/nvcc --cudart static -link -o  "Simple_scan_XML_Parse" $(OBJS) $(USER_OBJS) $(LIBS)
+	/usr/local/cuda-6.0/bin/nvcc --cudart static -link -o  "Simple_scan_XML_Parse" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
@@ -57,8 +57,6 @@ Simple_scan_XML_Parse: $(OBJS) $(USER_OBJS)
 clean:
 	-$(RM) $(CU_DEPS)$(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) Simple_scan_XML_Parse
 	-@echo ' '
-
-secondary-outputs: $(CUBINS)
 
 .PHONY: all clean dependents
 .SECONDARY:

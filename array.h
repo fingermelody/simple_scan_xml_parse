@@ -6,4 +6,6 @@ typedef struct{
 	int size;
 }array;
 
+int array_sum(array** arrays,int num);
+
 #endif

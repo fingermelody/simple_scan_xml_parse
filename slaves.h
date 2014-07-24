@@ -8,7 +8,7 @@ int slaves_num;
 /**************************************************/
 /*values for tag's inverted index.*/
 
-static hash_map *tags_inverted_index;
+hash_map *tags_inverted_index;
 /**************************************************/
 
 

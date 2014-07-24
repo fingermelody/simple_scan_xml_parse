@@ -7,11 +7,11 @@
 #include "Text.h"
 #include "task_queue.h"
 #include "time.h"
-#define MAX_TAGS 1000000
+#define MAX_TAGS 100000
 
 void start_tag_handle(tag_info *start_tag, simple_parser* parser){
 	parser->start_tag_num ++;
-	start_tag->id = parser->start_tag_num;
+	start_tag->id = parser->start_tag_num + parser->id_base;
 	StackPush(parser->start_tags,start_tag);
 	parser->unresolved_start_tag ++;
 }
@@ -133,15 +133,18 @@ void default_parser_char_handler(void* v_parser,char cur,long loc){
 	}
 }
 
-void parser_init(simple_parser* parser, parser_char_handler char_handler){
+void parser_init(simple_parser* parser, parser_char_handler char_handler, unsigned long ID_base){
 	parser->start_tag_num = 0;
 	parser->end_tag_num = 0;
 	parser->tasks = 0;
 	parser->unresolved_end_tag = 0;
 	parser->unresolved_start_tag = 0;
 	parser->st = st_Content;
+	parser->id_base = ID_base;
 	parser->array_tags = (Tag_Array*)malloc(sizeof(Tag_Array));
 	tag_array_init(parser->array_tags,DEFAULT_TAG_ARRAY_SIZE);
+	parser->un_start_tags = (Tag_Array*)malloc(sizeof(Tag_Array));
+	tag_array_init(parser->un_start_tags,UNRESOLVE_TAG_SIZE);
 	parser->start_tags = (stackT*)malloc(sizeof(stackT));
 	StackInit(parser->start_tags,MAX_TAGS);
 	if(char_handler == NULL)
@@ -150,33 +153,35 @@ void parser_init(simple_parser* parser, parser_char_handler char_handler){
 
 Tag_Array* parser_merge(simple_parser** parsers, int num){
 	int i,j;
-	int all_tag_count=0;
-	for(i=0;i<num;i++){
-		all_tag_count += parsers[i]->start_tag_num;
-	}
+
 	Tag_Array* result = (Tag_Array*)malloc(sizeof(Tag_Array));
-	if(result == NULL){
-		printf("merge failed : malloc new Tag_Array failed");
+	Tag_Array* G_un_starts  = (Tag_Array*)malloc(sizeof(Tag_Array));
+	int G_un_start_num = 0;
+	if(result == NULL || G_un_starts == NULL){
+		printf("merge failed : malloc new Tag_Array failed!\n");
 		return NULL;
 	}
-	tag_array_init(result,all_tag_count);
+	tag_array_init(result,TAG_ARRAY_MAX_SIZE);
+	tag_array_init(G_un_starts,UNRESOLVE_TAG_SIZE*num);
 	tag_array_add_array(result,parsers[0]->array_tags);
-	int sum_pre_id = parsers[0]->start_tag_num;
+	tag_array_add_array(G_un_starts,parsers[0]->un_start_tags);
+	G_un_start_num = parsers[0]->unresolved_start_tag;
 	for(i=1;i<num;i++){
 		for(j=0;j<parsers[i]->start_tag_num;j++){
-			parsers[i]->array_tags->tags[j].id += sum_pre_id;
 			if(parsers[i]->array_tags->tags[j].parent < 0){
-				int backward_index_of_parent = parsers[i-1]->unresolved_start_tag + parsers[i]->array_tags->tags[j].parent;
-				if(backward_index_of_parent != 0){
-					int pre_end = parsers[i-1]->start_tag_num;
-					parsers[i]->array_tags->tags[j].parent = parsers[i-1]->array_tags->tags[pre_end-backward_index_of_parent].id;
+				int index_of_parent = 0 - parsers[i]->array_tags->tags[j].parent;
+				if(index_of_parent != 0){
+					parsers[i]->array_tags->tags[j].parent = G_un_starts->tags[index_of_parent].id;
 				}else{
 					parsers[i]->array_tags->tags[j].parent = 0;
 				}
 			}
 			tag_array_add(result,&(parsers[i]->array_tags->tags[j]));
 		}
-		sum_pre_id += parsers[i]->start_tag_num;
+		G_un_start_num -= parsers[i]->unresolved_end_tag;
+		tag_array_pre_delete(G_un_starts,parsers[i]->unresolved_end_tag);
+		tag_array_pre_add(G_un_starts,parsers[i]->un_start_tags);
+		G_un_start_num += parsers[i]->unresolved_start_tag;
 	}
 
 	return result;

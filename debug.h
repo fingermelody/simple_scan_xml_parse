@@ -17,9 +17,11 @@
 //#define TASK_GET_TIME_TEST
 #define TASK_NUM_TEST
 //#define READ_TEST
-#define SINGLE_THREAD_TIME_TEST
+//#define SINGLE_THREAD_TIME_TEST
 #define HOST_TIME_TEST
 #define CUDA_TIME_TEST
+#define SLAVE_TIME_TEST
+//#define QUERY_TEST
 int di;
 
 clock_t read_start, read_finish;

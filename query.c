@@ -18,17 +18,17 @@ void* query_tag_id(char* tag_name){
 	return NULL;
 }
 
-void* query(void* argc){
-	char tag_name[20];
-	while(1)
-	{
-		fgets(tag_name,sizeof(tag_name),stdin);
-		array* array_ids = query_tag_id(tag_name);
-		int* ids = (int*)array_ids->data;
-		int i;
-		for(i=0;i<array_ids->size;i++)
-			printf("%d ",ids[i]);
-	}
-
-	return NULL;
-}
+//void* query(void* argc){
+//	char tag_name[20];
+//	while(1)
+//	{
+//		fgets(tag_name,sizeof(tag_name),stdin);
+//		array* array_ids = query_tag_id(tag_name);
+//		int* ids = (int*)array_ids->data;
+//		int i;
+//		for(i=0;i<array_ids->size;i++)
+//			printf("%d ",ids[i]);
+//	}
+//
+//	return NULL;
+//}

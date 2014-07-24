@@ -88,7 +88,7 @@ int reader_seam(reader* freader){
 		else
 			s_tag->parent = p->id;
 		tag_array_add(parser->array_tags,s_tag);
-
+		tag_array_add(parser->un_start_tags,s_tag);
 		parser->end_tag_num++;
 		if(parser->end_tag_num%TAGS_PER_TIME == 0){
 			parse_task *task = (parse_task*)malloc(sizeof(parse_task));

@@ -210,12 +210,14 @@ __global__ void parse_tag(tag_info* tags_info, char* s, long base,long length, T
 void* slave_parse(void* argc){
 
 #ifdef TIME_TEST
-	clock_t slave_read_start, slave_read_finish;
-	clock_t slave_whole_start, slave_whole_finish;
-	clock_t pre_whole_start = 0;
 	float whole_cuda_parse = 0.0;
 	long all_tasks_length = 0;
 	long slave_tasks = 0;
+#endif
+#ifdef SLAVE_TIME_TEST
+	struct timeval slave_start, slave_stop;
+	gettimeofday(&slave_start,NULL);
+	double start_t1 = slave_start.tv_sec + (slave_start.tv_usec/1000000.0);
 #endif
 	MPI_Status s_prob,s_recv_info;
 	size_t inverted_index_map_size = 134217728; //2^27
@@ -252,10 +254,9 @@ void* slave_parse(void* argc){
 		switch(s_prob.MPI_TAG){
 
 		case MSG_SEND_TAG_INFO:
-#ifdef TIME_TEST
-		slave_whole_start = clock();
+
 		slave_tasks ++;
-#endif
+
 			MPI_Recv(tag_info_bytes,count,MPI_CHAR,0,MSG_SEND_TAG_INFO,MPI_COMM_WORLD,&s_recv_info);
 			tag_info_ready = 1;
 			tags_num = count/sizeof(tag_info);
@@ -267,21 +268,14 @@ void* slave_parse(void* argc){
 				cuda_index += host_tag_infos[i].length;
 			}
 			host_read_string = (char*)malloc(cuda_index);
-#ifdef TIME_TEST
-			slave_read_start = clock();
-#endif
+
 			for(i=0;i<tags_num;i++){
 				lseek(pf,host_tag_infos[i].location,SEEK_SET);
 				read(pf,host_read_string+host_tag_infos[i].cuda_parse_index,host_tag_infos[i].length);
 			}
-#ifdef TIME_TEST
-			slave_read_finish = clock();
-#endif
+
 //			printf("%10s\n",host_read_string);
 			text_ready = 1;
-#ifdef L_DEBUG
-			printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-#endif
 
 			break;
 		case MSG_QUERY_REQUEST:
@@ -338,23 +332,13 @@ void* slave_parse(void* argc){
 			cudaEventSynchronize(cuda_parse_finish);
 #endif
 			memset(tag_info_bytes,0,sizeof(tag_info)*TAGS_PER_TIME);
-#ifdef L_DEBUG
-			printf("**********************************************************\n");
-			printf("name: %s,id: %d\n",host_tags_buffer[20].name,host_tags_buffer[20].info.id);
-#endif
-#ifdef TIME_TEST
-			clock_t insert_start, insert_end;
-			insert_start = clock();
-#endif
+
 			for(int i=0;i< TAGS_PER_TIME;i++) if(host_tags_buffer[i].nameCharIndex>0){
 
 				char* key = host_tags_buffer[i].name;
 				hash_map_insert(tags_inverted_index,(void*)key,&host_tags_buffer[i]);
 			}
 
-#ifdef TIME_TEST
-			insert_end = clock();
-#endif
 //			free(host_tags_buffer);
 			text_ready = 0;
 			tag_info_ready = 0;
@@ -362,29 +346,29 @@ void* slave_parse(void* argc){
 			//notify the master machine that this node has completed the partial parsing work
 			MPI_Send(&idle,1,MPI_INT,0,MSG_IDLE,MPI_COMM_WORLD);
 
-#ifdef TIME_TEST
-			slave_whole_finish = clock();
-			float slave_whole_time = (float)(slave_whole_finish-slave_whole_start)/CLOCKS_PER_SEC;
-			float slave_read_time = (float)(slave_read_finish-slave_read_start)/CLOCKS_PER_SEC;
-			float slave_insert_time = (float)(insert_end-insert_start)/CLOCKS_PER_SEC;
-			float dur_btw_starts =(float)(slave_whole_start - pre_whole_start)/CLOCKS_PER_SEC;
+#ifdef CUDA_TIME_TEST
+
 			float cuda_parse_time;
 			cudaEventElapsedTime(&cuda_parse_time,cuda_parse_start,cuda_parse_finish);
 			whole_cuda_parse += cuda_parse_time;
 			all_tasks_length += cuda_index;
 			cudaEventDestroy(cuda_parse_start);
 			cudaEventDestroy(cuda_parse_finish);
-//			printf("slave time report:(%d)--(%f,%f,%f,%f,%f)\n",
-//					cuda_index,slave_whole_time,slave_read_time,cuda_parse_time,slave_insert_time,dur_btw_starts);
-			pre_whole_start = slave_whole_start;
 #endif
 		}
 	}
+/*
 	if(slave_tasks!=0){
 		printf("slave average report,(slave_tasks, average_cuda_parse, average_tasks_length)\n"
 				"                    (%ld,%.6f,%ld)\n",
 				slave_tasks, whole_cuda_parse/slave_tasks, all_tasks_length/slave_tasks);
 	}
+*/
+#ifdef SLAVE_TIME_TEST
+	gettimeofday(&slave_stop,NULL);
+	double stop_t = slave_stop.tv_sec + slave_stop.tv_usec/1000000.0;
+		printf("slave time report:(%.6lf,%.6lf,%.6lf)\n",start_t1,stop_t,stop_t-start_t1);
+#endif
 return NULL;
 }
 
@@ -420,10 +404,12 @@ int main(int argc, char **argv) {
 		gettimeofday(&host_start,NULL);
 		double start = host_start.tv_sec + host_start.tv_usec/1000000.0;
 #endif
+
 		pthread_t thread_schedule;
 		pthread_create(&thread_schedule,NULL,schedule,NULL);
 		multi_read(filePath,thread_num);
 		pthread_join(thread_schedule,NULL);
+
 		printf("-------------------------------------------------\n");
 #ifdef HOST_TIME_TEST
 		gettimeofday(&host_stop,NULL);

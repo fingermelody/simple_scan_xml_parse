@@ -8,6 +8,45 @@
 #include "Text.h"
 #include "task_queue.h"
 
+array* query(char* s){
+	int i;
+	MPI_Status status;
+	int* results[slaves_num];
+	array* res_arrays[slaves_num];
+	for(i=0;i<slaves_num;i++){
+		results[i] = (int*)malloc(sizeof(int));
+		res_arrays[i] = (array*)malloc(sizeof(array));
+		array_init(res_arrays[i]);
+	}
+
+	MPI_Status res_status[slaves_num];
+	int count_all = 0;
+	for(i=1;i<=slaves_num;i++){
+		MPI_Send(s,strlen(s),MPI_CHAR,i,MSG_QUERY_REQUEST,MPI_COMM_WORLD);
+		MPI_Probe(i,MSG_QUERY_RESPONSE,MPI_COMM_WORLD,&status);
+		int count;
+		MPI_Get_count(&status,MPI_INT,&count);
+		results[i-1] = (int*)malloc(sizeof(int)*count);
+		MPI_Recv(results[i-1],count,MPI_INT,i,MSG_QUERY_RESPONSE,MPI_COMM_WORLD,&res_status[i-1]);
+		res_arrays[i-1]->data = results[i-1];
+		res_arrays[i-1]->size = count;
+		count_all += count;
+	}
+	int* a = (int*)malloc(sizeof(int)*count_all);
+	int m=0;
+	for(i=0;i<slaves_num;i++){
+		int j;
+		for(j=0;j<res_arrays[i]->size;j++,m++){
+			a[m] = ((int*)(res_arrays[i]->data))[j];
+		}
+	}
+	array* t = (array*)malloc(sizeof(array));
+	array_init(t);
+	t->data = a;
+	t->size = count_all;
+	return t;
+}
+
 
 /*
  * schedule thread will manage the xml file participate work, if there is an idle slave, we transfer
@@ -22,7 +61,7 @@ void* schedule(void* c_arg){
 #endif
 
 	MPI_Request request[3];
-	MPI_Status status;
+
 	int indices[slaves_num],num_completed;
 	int j;
 	for(j=0;j<slaves_num;j++)
@@ -72,35 +111,32 @@ void* schedule(void* c_arg){
 		double dur = stop - start;
 		printf(" master time report\n%ld--(%f,%f,%f)\n",task_counter,start,stop,dur);
 #endif
-		int i;
-		char end;
-		for(i=1;i<=slaves_num;i++)
-			MPI_Send(&end,0,MPI_CHAR,i,MSG_EXIT,MPI_COMM_WORLD);
-		return NULL;
-		/*
-#ifndef READ_TEST
-			printf(" please input a tag name: \n");
-			char s[31];
-			scanf("%30s",s);
-			if(strlen(s)!=0){
-				int i;
-				int* results[slaves_num];
-				array* res_arrays[slaves_num];
-				MPI_Status res_status[slaves_num];
-				for(i=1;i<=slaves_num;i++){
-					MPI_Send(s,strlen(s),MPI_CHAR,i,MSG_QUERY_REQUEST,MPI_COMM_WORLD);
-					MPI_Probe(i,MSG_QUERY_RESPONSE,MPI_COMM_WORLD,&status);
-					int count;
-					MPI_Get_count(&status,MPI_INT,&count);
-					results[i-1] = (int*)malloc(sizeof(int)*count);
-					MPI_Recv(results[i-1],count,MPI_INT,i,MSG_QUERY_RESPONSE,MPI_COMM_WORLD,&res_status[i-1]);
-					res_arrays[i-1]->data = results[i-1];
-					res_arrays[i-1]->size = count;
-				}
+
+
+#ifdef QUERY_TEST
+		printf(" please input a tag name: \n");
+		char s[31];
+		scanf("%30s",s);
+		int sum_count = 0;
+		if(strlen(s)!=0){
+			array* condition = (array*)malloc(sizeof(array));
+			array_init(condition);
+			parse_query(s,condition);
+			array** results = (array*)malloc(sizeof(array*)*(condition->size));
+			for(j=0;j<condition->size;j++){
+				char* s = ((char**)(condition->data))[j];
+				results[j] = query(s);
 			}
-			printf("%s\n",s);
+			printf("qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq\n");
+		}
 #endif
-*/
+#ifndef QUERY_TEST
+			int i;
+			char end;
+			for(i=1;i<=slaves_num;i++)
+				MPI_Send(&end,0,MPI_CHAR,i,MSG_EXIT,MPI_COMM_WORLD);
+			return NULL;
+#endif
 		}
 
 	}

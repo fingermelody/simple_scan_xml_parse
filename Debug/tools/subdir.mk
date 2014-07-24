@@ -23,8 +23,8 @@ C_DEPS += \
 tools/%.o: ../tools/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: NVCC Compiler'
-	/usr/local/cuda-5.5/bin/nvcc -I/usr/include/mpi -I/usr/local/include -G -g -O0  -odir "tools" -M -o "$(@:%.o=%.d)" "$<"
-	/usr/local/cuda-5.5/bin/nvcc -I/usr/include/mpi -I/usr/local/include -G -g -O0 --compile  -x c -o  "$@" "$<"
+	/usr/local/cuda-6.0/bin/nvcc -I/usr/include/mpi -I/usr/local/include -G -g -O0   -odir "tools" -M -o "$(@:%.o=%.d)" "$<"
+	/usr/local/cuda-6.0/bin/nvcc -I/usr/include/mpi -I/usr/local/include -G -g -O0 --compile  -x c -o  "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

@@ -8,11 +8,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <time.h>
+#include "TagArray.h"
 #define MAX_THREAD_NUM 50
 pthread_t thread_pool[MAX_THREAD_NUM];
 parse_area parse_parts[MAX_THREAD_NUM];
 
 int file_read_over;
+Tag_Array* all_tags;
 pthread_mutex_t multi_read_mutex;
 
 void* single_read(void* arg){
@@ -40,7 +42,7 @@ void multi_read(char* filename, int thread_num){
 #ifdef MULTI_READ_TIME_TEST
 	struct timeval tim;
 	gettimeofday(&tim,NULL);
-	double master_start = tim.tv_sec + (tim.tv_usec/1000000.0);
+	double m_start = tim.tv_sec + (tim.tv_usec/1000000.0);
 #endif
 	FILE *pf = fopen(filename,"r");
 	if(!pf) printf("open file failed!\n");
@@ -60,8 +62,8 @@ void multi_read(char* filename, int thread_num){
 	for(i=0;i<thread_num;i++){
 		parsers[i] = (simple_parser*)malloc(sizeof(simple_parser));
 		readers[i] = (reader*)malloc(sizeof(reader));
-
-		parser_init(parsers[i],NULL);
+		unsigned long id_base = (TAG_ARRAY_MAX_SIZE/thread_num) * i;
+		parser_init(parsers[i],NULL,id_base);
 		reader_init(readers[i],parsers[i],filename,parse_parts[i].base,parse_parts[i].length);
 	}
 
@@ -74,13 +76,13 @@ void multi_read(char* filename, int thread_num){
 	file_read_over = 1;
 #ifdef MULTI_READ_TIME_TEST
 	gettimeofday(&tim,NULL);
-	double master_stop = tim.tv_sec + (tim.tv_usec/1000000.0);
-	double dur = master_stop - master_start;
+	double m_stop = tim.tv_sec + (tim.tv_usec/1000000.0);
+	double dur = m_stop - m_start;
 	printf("****************************************\n");
-	printf("multi_read over, (%.6lf)\n",dur);
+	printf("multi_read over, (%.6lf，%.6lf，%.6lf)\n",m_start,m_stop, dur);
 	printf("****************************************\n");
 #endif
-	Tag_Array* r = parser_merge(parsers,thread_num);
+//	all_tags = parser_merge(parsers,thread_num);
 }
 
 int multi_read_over(){
